@@ -12,6 +12,7 @@ Fitonexa - The Smart Fitness Expert
 | 2 | Yash Patil | 53 | AURO | 2023.yash.patil@ves.ac.in |
 | 3 | Sayalee Mahagaonkar | 48 | AURO | 2023.sayalee.mahagaonkar@ves.ac.in |
 | 4 | Gauri Jaitapkar | 40 | AURO | 2023.gauri.jaitapkar@ves.ac.in |
+
 ---
 
 ## Guide Details
@@ -19,11 +20,13 @@ Fitonexa - The Smart Fitness Expert
 **Project Guide:** Dr. Sangeetha Prasanna Ram
 **Department:** Automation and Robotics  
 **Institute:** VESIT, Mumbai  
+
 ---
 
 ## Problem Statement
 
-The aim of this project is to design and develop a system that solves the problem of manual and subjective assessment of physiotherapy exercises by automatically analyzing patient movement patterns using computer vision and pose estimation technology. 
+The aim of this project is to design and develop a system that solves the problem of manual and subjective assessment of physiotherapy exercises by automatically analyzing patient movement patterns using computer vision and pose estimation technology.
+
 ---
 
 ## Abstract
@@ -32,6 +35,7 @@ Physiotherapy exercises play a critical role in rehabilitation and recovery, but
 
 This project proposes the development of an intelligent video-based rehabilitation monitoring system capable of analyzing patient exercise performance automatically. The system uses computer vision and pose estimation techniques to detect body landmarks from recorded exercise videos, extract key joint coordinates, calculate biomechanical angles, identify exercise repetitions, and segment movement into distinct motion phases for detailed analysis.
 The implementation utilizes Python along with MediaPipe pose estimation, OpenCV for video processing, signal smoothing filters, and data analysis libraries such as NumPy and Pandas. The expected outcome is a system capable of accurately evaluating exercise quality, detecting movement deviations, and generating quantitative performance metrics. This system can be applied in physiotherapy clinics, home-based rehabilitation, tele-rehabilitation platforms, and remote patient monitoring systems.
+
 ---
 
 ## Objectives
@@ -41,6 +45,7 @@ The implementation utilizes Python along with MediaPipe pose estimation, OpenCV 
 3) To build an intelligent machine learning model that utilizes extracted joint angles and movement features to classify exercise execution as correct or incorrect and identify deviations in patient posture or movement patterns.
 4) To provide real-time corrective feedback to patients by detecting improper exercise execution and suggesting movement corrections in order to reduce recovery time, prevent the risk of secondary injury, and improve rehabilitation effectiveness.
 5) To validate the performance and clinical applicability of the device through pilot studies conducted in collaboration with three physiotherapy clinics, using expert-labelled exercise data provided by professional physiotherapists, and to document the findings through research publication.
+
 ---
 
 ## Scope of the Project
@@ -53,6 +58,7 @@ The implementation utilizes Python along with MediaPipe pose estimation, OpenCV 
 - Coverage of six rehabilitation exercises focusing on two major joints: the knee joint and shoulder joint.
 - Data collection, pilot testing, and performance validation through clinical studies conducted across three physiotherapy clinics in collaboration with professional physiotherapists.
 - Documentation of results and publication of research findings in the form of at least one research paper.
+  
 ---
 
 ## Existing System
@@ -70,6 +76,7 @@ Apps such as MyLift represent the consumer end of AI-assisted exercise monitorin
 This distinction is fundamental. Consumer fitness applications are designed for healthy individuals performing gym exercises such as squats, deadlifts and bench press. They are not built for clinical populations with restricted range of motion, specific prescribed exercise protocols or conditions requiring careful monitoring of compensatory movements. They provide no mechanism for a physiotherapist to review session data, set patient-specific target ranges, or receive alerts when a patient performs an exercise incorrectly. The feedback these apps provide is generic rather than condition-specific, and none of them address supine rehabilitation exercises relevant to spinal conditions.
 
 None of the existing systems combine condition-specific exercise monitoring, patient-specific adaptive feedback, edge-based real-time inference, and clinical accessibility in a single deployable device. Fitonexa addresses this gap by building a low-cost camera-based system using pose estimation and per-exercise machine learning classifiers that can be deployed directly in a physiotherapy clinic without proprietary hardware, enterprise contracts or internet dependency - while providing real-time, rep-level feedback calibrated to each patient's prescribed range of motion. 
+
 ---
 
 ## Proposed System
@@ -80,37 +87,42 @@ Each repetition is further segmented into multiple movement states representing 
 The prepared dataset is then used to train multiple machine learning models, including Random Forest and Long Short-Term Memory (LSTM) networks, in order to determine the model that provides the highest classification accuracy. The best-performing model will subsequently be deployed on edge hardware for real-time inference and patient feedback. System performance and clinical applicability will be validated through pilot studies conducted across three physiotherapy clinics.
 The major hardware components used in the system include an NVIDIA Jetson Nano 4GB Developer Kit for edge processing, a Logitech C922 Pro HD camera for video capture, a 7-inch HDMI display for user interaction and feedback visualization, a 64GB SD card for storage, and a 20,000 mAh battery pack for portable operation.
 The expected outcome is an affordable and portable rehabilitation monitoring system capable of assisting physiotherapists by enabling accurate home-based exercise monitoring, reducing clinician workload, improving patient compliance, shortening recovery time, and preventing injuries caused by incorrect exercise execution.
+
 ---
 
 ## System Architecture
 
-System_Architecture.png
+![System Architecture](images/System_Architecture.png)
+
 ---
 
 ## Hardware Requirements
 
-Hardware.png
+![Hardware Requirements](images/Hardware.png)
+
 ---
 
 ## Software Requirements
 
-Software.png
+![Software Requirements](images/Software.png)
+
 ---
 
 ## Technologies Used
 
-Python – Core programming language for backend development and ML pipeline.
-NVIDIA Jetson Nano / Jetson Orin – Edge device for real-time on-device inference.
-Computer Vision – Real-time analysis of patient movement through video input.
-MediaPipe – Pose estimation and body landmark detection.
-OpenCV – Video capture and frame-by-frame image processing.
-Signal Processing – Noise reduction and smoothing of joint angle data.
-Machine Learning – Classification of exercise performance as correct or incorrect.
-Edge AI Deployment – Running trained ML models locally on embedded hardware.
-Embedded Systems – Integration of camera, display, battery, and feedback modules.
-Cloud Database – Storage and transmission of patient exercise session data.
-Mobile/Web Application – Interface for physiotherapists to monitor patient progress.
-Haptic and Audio Feedback – Real-time corrective feedback for patients during exercise.
+1) Python – Core programming language for backend development and ML pipeline.
+2) NVIDIA Jetson Nano / Jetson Orin – Edge device for real-time on-device inference.
+3) Computer Vision – Real-time analysis of patient movement through video input.
+4) MediaPipe – Pose estimation and body landmark detection.
+5) OpenCV – Video capture and frame-by-frame image processing.
+6) Signal Processing – Noise reduction and smoothing of joint angle data.
+7) Machine Learning – Classification of exercise performance as correct or incorrect.
+8) Edge AI Deployment – Running trained ML models locally on embedded hardware.
+9) Embedded Systems – Integration of camera, display, battery, and feedback modules.
+10) Cloud Database – Storage and transmission of patient exercise session data.
+11) Mobile/Web Application – Interface for physiotherapists to monitor patient progress.
+12) Haptic and Audio Feedback – Real-time corrective feedback for patients during exercise.
+
 ---
 
 ## Methodology
@@ -131,16 +143,19 @@ Integrate all system components including camera input, pose estimation model, m
 Train and evaluate machine learning models using collected exercise data, deploy the best-performing model on the edge device, and conduct pilot clinical validation studies at three physiotherapy clinics to evaluate system accuracy and usability.
 8. Documentation and Publication
 Document system architecture, implementation methodology, experimental results, and clinical validation outcomes, followed by preparation of research publication based on project findings.
+
 ---
 
 ## Project Timeline
 
-Project_Timeline.png
+![Project Timeline](images/Project_Timeline.png)
+
 ---
 
 ## Weekly Progress Updates
 
-Weekly_Progress.png               
+![Weekly Progress](images/Weekly_Progress.png) 
+
 ---
 
 ## Design Files
@@ -158,7 +173,8 @@ Upload and link all design files here.
 
 ## Flowchart / Algorithm
 
-Flowchart.png
+![Flowchart](images/System_Architecture.png) 
+
 ---
 
 ### Algorithm
@@ -170,6 +186,7 @@ Flowchart.png
 5) Generate Output/ Feedback: The machine learning model classifies the exercise as correct or incorrect based on movement quality. If improper movement patterns are detected, the system generates corrective feedback indicating what adjustment the patient should make to prevent injury.
 6) Display/ Store/ Transmit Results: Real-time feedback is delivered through visual cues on the display, audio feedback through the speaker system, and haptic feedback through the wristband. Once the exercise session is completed, session data is transmitted to the cloud database through HTTP requests. Summary reports and exercise performance data are then made available on the physiotherapist’s mobile/web application for review and monitoring of patient progress.
 7) Stop: The rehabilitation session ends after the exercise routine is completed, all session data is stored successfully, and the device returns to standby mode awaiting the next session.
+
 ---
 
 ## Implementation Details
@@ -183,10 +200,11 @@ The hardware prototype is built around the NVIDIA Jetson Nano Developer Kit / Je
 ### Software Implementation
 
 The software system is primarily developed using Python. Real-time video frames captured by the camera are processed using MediaPipe pose estimation to identify exercise-specific body landmarks and joint coordinates. Using these coordinates, biomechanical joint angles are calculated through the three-point angle formula. A repetition detection algorithm identifies individual exercise repetitions by detecting peaks or valleys in movement data depending on exercise type. Each repetition is segmented into movement states, and statistical features such as mean, minimum, maximum, range, and standard deviation are extracted from each state. These features form the input dataset used to train machine learning models including Random Forest and LSTM networks. The best-performing model is deployed on the edge device for real-time exercise classification. Session data is transmitted to a remote database through HTTP requests and can later be reviewed by the physiotherapist through a mobile or web application. 
+
 ---
 
 ## Code Structure
-
+```text
 BE-Capstone-Project/
 │
 ├── README.md
@@ -215,36 +233,47 @@ BE-Capstone-Project/
 │   └── Sample.png
 │
 └── references/
-│   └── Research_Paper_1_Ref_Goniometer.pdf
+    └── Research_Paper_1_Ref_Goniometer.pdf
+```
 ---
 
 ## How to Run the Project
 
 Step 1: Set Up the Hardware
 Connect all hardware components including the Jetson Nano / Jetson Orin, USB camera, HDMI display, speaker module, and power supply. Ensure the camera is positioned correctly in front of the patient.
+
 Step 2: Install Required Dependencies
 Install all required Python libraries and frameworks.
 pip install mediapipe opencv-python numpy pandas scikit-learn tensorflow matplotlib. Also install the required NVIDIA JetPack SDK and Ubuntu dependencies for the Jetson device.
+
 Step 3: Load the Pose Estimation and Machine Learning Models
 Download the MediaPipe Pose Landmarker model and load the trained machine learning model used for exercise classification.
 python download_model.py
+
 Step 4: Run the Main Application
 Start the rehabilitation monitoring system. The camera begins capturing real-time video frames and starts exercise analysis.
 python main.py
+
 Step 5: Perform the Prescribed Exercise
 The patient stands or sits in front of the device and performs the exercise recommended by the physiotherapist. The system continuously tracks movement and analyzes exercise performance.
+
 Step 6: Observe Output and Feedback
 The system displays real-time corrective feedback on the screen and provides audio / haptic feedback whenever incorrect exercise execution is detected. Session data is stored locally and transmitted to the cloud database for physiotherapist review.
+
 ---
 
 ## Testing and Results
 
-Tests.png
+![Tests](images/Tests.png) 
+
+
 ---
 
 ## Result Images / Videos
 
-Sample.png
+![Result](images/Sample.png) 
+
+
 ---
 
 ## Applications
@@ -253,6 +282,7 @@ Sample.png
 2) Remote Patient Monitoring – Allows physiotherapists to track patient exercise performance and recovery progress remotely.
 3) Sports Injury Rehabilitation – Assists athletes in performing recovery exercises correctly while reducing the risk of reinjury.
 4) Clinical Rehabilitation Support – Can act as an assistive tool for physiotherapists in clinics to automate exercise monitoring and assessment.
+
 ---
 
 ## Advantages
@@ -261,6 +291,7 @@ Sample.png
 2) Real-Time Corrective Feedback – Provides immediate visual, audio, and haptic feedback to prevent incorrect exercise execution.
 3) Portable and Low-Cost Solution – Edge-based design makes the system more affordable compared to existing commercial rehabilitation systems.
 4) Improves Recovery Outcomes – Helps patients perform exercises correctly, reducing injury risk and potentially shortening recovery time.
+
 ---
 
 ## Limitations
@@ -269,6 +300,7 @@ Sample.png
 2) Dependence on Camera Positioning – Incorrect camera angle or poor lighting may reduce pose detection accuracy.
 3) Limited Exercise Coverage – The current system is designed only for selected knee and shoulder rehabilitation exercises.
 4) Clinical Validation Still Required – Large-scale testing is necessary to fully validate performance in real-world clinical settings.
+
 ---
 
 ## Future Scope
@@ -277,17 +309,19 @@ Sample.png
 2) Improve Model Accuracy – Train on larger datasets and explore more advanced deep learning architectures.
 3) Wearable Sensor Integration – Combine computer vision with IMU or motion sensors for improved movement analysis.
 4) Tele-Rehabilitation Platform Development – Develop a complete cloud-connected platform for remote physiotherapy sessions and long-term patient monitoring.
+
 ---
 
 ## Research Paper / Publication
 
-| Item                      | Details                                                   
-|--------------------------------------------------------- |
-| Paper Title               | Real Time Pose Estimation for Resource Constrained Edge Devices                                                        
-| Conference / Journal Name |                                                           
-| Paper Status              | Not Started 
-| Submission Date           |                                                           
-| Paper Link                |                                                           
+| Item | Details |
+|------|---------|
+| Paper Title | Real-Time Pose Estimation for Resource-Constrained Edge Devices |
+| Conference / Journal | To be decided |
+| Paper Status | In Progress |
+| Expected Submission Date | December 2026 |
+| Paper Link | Yet to be published |
+
 ---
 
 ## References
@@ -297,10 +331,12 @@ Sample.png
 
 [2] R. Sharma, V. Vaibhav, R. Meshram, B. Singh, and G. Khorwal,
 “A Systematic Review on Quadriceps Angle in Relation to Knee Abnormalities,”
-PMCID: PMC9974941, PMID: 36874732. 
+PMCID: PMC9974941, PMID: 36874732.
+
 ---
 
 ## Declaration
 
 We declare that this project work is carried out by our team as part of the BE Capstone Project. The work will be regularly updated on GitHub and all references used will be properly cited.
+
 ---
