@@ -220,8 +220,8 @@ BE-Capstone-Project/
 ├── hardware/
 │
 ├── software/
-│   ├── FeatureExtraction_StatisticalAnalysis_SupineHeelSlides.ipynb
-│   └── Joint_Coordinates_Identification.ipynb
+│   ├── FeatureExtraction_StatisticalAnalysis_SupineHeelSlides.py
+│   └── Joint_Coordinates_Identification.py
 │
 ├── images/
 │   ├── System_architecture.png
