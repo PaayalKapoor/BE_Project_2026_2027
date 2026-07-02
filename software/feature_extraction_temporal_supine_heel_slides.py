@@ -1,3 +1,6 @@
+#Code to extract features from the videos and save to csv
+
+import os
 import mediapipe as mp
 from mediapipe.tasks import python
 #tasks is designed to support multiple programming languages
@@ -15,8 +18,12 @@ import numpy as np
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
 
-VIDEO_PATH="D:\Sayalee\Major_project\Dataset_Videos\Patient119.mp4"
+VIDEO_PATH="D:\Sayalee\Major_project\Dataset_Videos\Patient118.mp4"
+OUTPUT_PATH="D:\Sayalee\Major_project\Features\Supine_heel_slides_features.csv"
 SIDE="right"
+
+PATIENT_ID=1
+
 SLIDING_WINDOW=11
 POLY_ORDER=3    
 #tune the order of the polynomial since less order will be too stiff and more would start following the noise than signal
@@ -252,7 +259,7 @@ def extract_landmarks(video_path, side):
     #to fill missing values
     coord_cols=[] #create an empty list to collect the values of the detected column
     for col in df.columns: #df.columns gives the names of the columns in the dataframe
-        if col != "detected" & col != "visibility":
+        if col != "detected" and col != "visibility":
             coord_cols.append(col) #append all the columns except "detected" and visibility
     df[coord_cols]=df[coord_cols].interpolate(method='linear').ffill().bfill()
     #interpolate handles the nans (gaps) in between. ffill does it for the last rows and bfill for the first few rows
@@ -286,6 +293,14 @@ def compute_angle(a,b,c):
     angle= np.arccos(cosine) #this is given in radians so it should be first converted to degrees 
     return np.degrees(angle) 
 
+def compute_pelvic_lift(hip, shoulder):
+    hip= np.array(hip)
+    shoulder= np.array(shoulder)
+
+    gap= hip[1]-shoulder[1]
+    torso_length= np.linalg.norm(hip-shoulder) + 1e-8
+    return(gap/torso_length)
+
 #create a function that calculates the angles that are required
 #while passing world landmarks make, this flag true: calculate_angles(dfw, world=True) 
 def calculate_measurements(lm_df : pd.DataFrame , world=False):
@@ -314,7 +329,9 @@ def calculate_measurements(lm_df : pd.DataFrame , world=False):
             foot= row[["foot_x", "foot_y"]].values
 
         frame_measurement["Knee_flexion"]= compute_angle(hip, knee, ankle)
-        #add all angles
+        frame_measurement["Hip_flexion"]= compute_angle(shoulder, hip, knee)
+        frame_measurement["Ankle_flexion"]= compute_angle(knee, ankle, foot)
+        frame_measurement["Pelvic_lift"]= compute_pelvic_lift(hip, shoulder)
         #append the angles of one frame that is stored as dictionary, to the list that contains angles of all frames
         all_measurements.append(frame_measurement)
     
@@ -452,6 +469,7 @@ def detect_phase(feature_df, rep_boundaries):
         rep_data= feature_df.loc[start:end]
         #extract the knee flexion velocities of the frames belonging to the rep
         rep_velocity= rep_data["Knee_flexion_velocity"] 
+        print(rep_velocity)
 
         #p1_end is the last frame in phase 1, which is full extension. start is around peak extension
         #later last frame is shifted to the last stationary frame
@@ -486,12 +504,67 @@ def detect_phase(feature_df, rep_boundaries):
                 p3_end= frame
             else:
                 break 
-
-
-
-df,dfw,fps= extract_landmarks(VIDEO_PATH, SIDE)
-ang_df= calculate_measurements(df)
-smooth_df= smooth_measurments(ang_df)
-temp_df= compute_temporal_features(smooth_df, fps)
-detect_rep(smooth_df)
         
+        #phase boundaries are defined. now define the phases
+        phase_df.loc[start:p1_end, "Phase"]= "P1" #full extension and hold
+        phase_df.loc[p1_end+1 : p3_start-1, "Phase"]= "P2" #descending from extension to flexion
+        phase_df.loc[p3_start:p3_end, "Phase"]= "P3" #full flexion and hold
+        phase_df.loc[p3_end+1: end-1, "Phase"]= "P4" #ascending from flexion to extension
+    
+    return phase_df
+
+#STEP 8: EXTRACT FEATURES INTO SINGLE DATAFRAME
+def extract_features(smooth_ang_df, temporal_df, rep_boundaries, phase_df, patient_id):
+    feature_df= pd.concat([smooth_ang_df, temporal_df, phase_df[["Phase"]]], axis=1) #axis=1 means stack column wise
+    feature_df["Patient_Id"]= patient_id
+
+    feature_df["Rep_Start"]= 0
+    feature_df["Rep_Id"]= 0
+
+    for rep in rep_boundaries:
+        start= rep["rep_start"]
+        end= rep["rep_end"]
+        rep_id= rep["rep_id"]
+        feature_df.loc[start:end-1, "Rep_Id"]= rep_id
+        feature_df.loc[start, "Rep_Start"]=1
+
+    return feature_df
+
+#STEP 9: SAVE TO CSV
+def save_to_csv(feature_df, output_path):
+    if os.path.exists(output_path):
+        feature_df.to_csv(
+            output_path, 
+            mode='a', #append
+            header=True, #dont write column names again 
+            index=True #save dataframe index
+        )
+    else:
+        feature_df.to_csv(
+            output_path,
+            mode='w', #write
+            header=True,
+            index=True
+        )
+
+#STEP 10: MAIN PIPELINE
+def process_video(video_path, output_path, side, patient_id):
+    df,dfw,fps= extract_landmarks(video_path, side)
+    ang_df= calculate_measurements(df)
+    smooth_df= smooth_measurments(ang_df)
+    temp_df= compute_temporal_features(smooth_df, fps)
+    print(temp_df.head())
+    rep_b= detect_rep(smooth_df)
+    feat_df= pd.concat([smooth_df, temp_df], axis=1)
+    phase_df= detect_phase(feature_df=feat_df,rep_boundaries=rep_b)
+    feature= extract_features(smooth_df,temp_df,rep_b,phase_df,PATIENT_ID)
+    print(feature.head())
+    print(rep_b)
+    save_to_csv(feature,output_path)
+
+def main():
+    vid_df= process_video(VIDEO_PATH, OUTPUT_PATH,SIDE,PATIENT_ID)
+    
+
+if __name__=="__main__":
+    main()
