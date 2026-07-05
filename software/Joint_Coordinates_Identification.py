@@ -22,7 +22,7 @@ if not os.path.exists(MODEL_PATH):
     print("Done.")
 
 #Here we configure the basic properties of the video being processed
-VIDEO_PATH  = "Paayal_2.mp4"  #Path of the video to be processed
+VIDEO_PATH  = "videos/Straight_Leg_Raises/Patient_124_2.mp4"  #Path of the video to be processed
 SIDE       = "left"            #The side of joint coordinates that needs to be worked with
 
 LANDMARK_INDICES = {

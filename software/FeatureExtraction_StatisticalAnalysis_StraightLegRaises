@@ -25,15 +25,15 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH  = "/videos/Supine_Heel_Slides/Paayal_2.mp4"  #Path to the input video that needs to be analyzed
-OUTPUT_CSV  = "/docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID  = "Paayal_2" #Unique patient ID
+VIDEO_PATH  = "videos/Straight_Leg_Raises/Patient_124_2.mp4"  #Path to the input video that needs to be analyzed
+OUTPUT_CSV  = "docs/straight_leg_raises_data.csv" #The output file that will be created to store the extracted features
+PATIENT_ID  = "Patient_124_2" #Unique patient ID
 SIDE        = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
 #Whereas the savitzky golay filter is a smoothing filter that reduces noise in data while preserving the overall shape, peaks, valleys and trends in the signal.
-SMOOTH_WINDOW = 11     #Smoothing window is set to 11, must be odd so that the middle value can be found easily. Points before and after the center value help estimate the smoothed points. For noiser signals, the value should be higher.
+SMOOTH_WINDOW = 21     #Smoothing window is set to 11, must be odd so that the middle value can be found easily. Points before and after the center value help estimate the smoothed points. For noiser signals, the value should be higher.
 #Here, we use 11 neighbouring points to estimate the center value. 5 before, current and 5 after
 SMOOTH_POLY   = 3 #Fit a cubic polynomial through those 11 points. It uses something called Least Squares Regression. The algorithm tries many possible curves and picks the one with the smallest overall error.
 #Basically the center value is smoothed using the polynomial and then the window is shifted by one position - this again changes the center and a new polynomial is used to find the smoothed value of the new center value. This process continues until all values are smoothed.
@@ -41,8 +41,8 @@ SMOOTH_POLY   = 3 #Fit a cubic polynomial through those 11 points. It uses somet
 # 180 180 | 180 176 172 169 165 | 165 165 (Repeating boundary values)
 
 #Rep detection
-REP_MIN_PROMINENCE = 15          #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
-REP_MIN_DISTANCE   = 20          #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
+REP_MIN_PROMINENCE = 10          #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
+REP_MIN_DISTANCE   = 50          #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
 
 #Used to divide each rep into states. The code determines these states based on the knee angle range of a repetition.
 """ How it works - Suppose one rep has max angle = 180 (fully extended)
@@ -69,7 +69,35 @@ print("SIDE_LANDMARKS set up successfully")
 
 """Extract Landmarks"""
 
-def extract_landmarks(video_path: str, side: str = "right") -> pd.DataFrame:
+def is_valid_leg(lms, lm_indices, side="right"):
+    hip_x   = lms[lm_indices["hip"]].x
+    hip_y   = lms[lm_indices["hip"]].y
+    knee_x  = lms[lm_indices["knee"]].x
+    knee_y  = lms[lm_indices["knee"]].y
+    ankle_x = lms[lm_indices["ankle"]].x
+    ankle_y = lms[lm_indices["ankle"]].y
+
+    #Rule 1: This rule basically checks what is the angle of the moving leg. By default the angle of the moving leg should roughly remain unaltered (around 170-180) throughout the movement. 
+    #Whereas the bent knee would be having a flexion angle of around 90-100. This is the largest differentiating factor between the resting leg and the moving leg. 
+    #As a result we check whether the knee is below a certain threshold, if yes then that particular frame (where the knee coordinate jumps to the resting leg) is regarded as invalid and discarded from the rest of the pipeline to avoid errenous calculations of joint angles.
+    #Knee angle is calculated using the the 3 point formula which in this case uses three coordinates - hip, knee and ankle
+    ba = np.array([hip_x   - knee_x, hip_y   - knee_y])
+    bc = np.array([ankle_x - knee_x, ankle_y - knee_y])
+    denom = np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-8
+    cos_val = np.dot(ba, bc) / denom
+    knee_angle = float(np.degrees(np.arccos(np.clip(cos_val, -1.0, 1.0))))
+
+    if knee_angle < 120: #If this condition satisfies then we return false indicating that the particular frame is invalid (invalid leg has been detected)
+        return False
+    #The ankle is the landmark most likely to be occluded in SLR. During the resting state the ankle lies flat on the bed and can be partially hidden by the bed surface edge, the patient's clothing, or the resting bent leg's foot. 
+    #When the ankle is not clearly visible, MediaPipe guesses its position and a guessed ankle position produces an unreliable knee angle and hip angle calculation.
+    #This rule just checks the visibility of the ankle since it plays a vital role in calculation of the knee and hip angle (if visibility is less due to occlusion the coordinate is an estimate and thereby might result in errenous calculations of joint angles)
+    if lms[lm_indices["ankle"]].visibility < 0.3:
+        return False
+    #if any of the following rules are not satisfied the frame is marked as invalid and discarded
+    return True
+
+def extract_landmarks(video_path: str, side: str = "right", visualize: bool = False) -> pd.DataFrame:
     """
     Run MediaPipe PoseLandmarker (Tasks API) on every frame.
 
@@ -116,50 +144,190 @@ Methods: read(), isOpened(), release(), get()"""
     min_pose_detection_confidence only helps detect a person, not if the joint coordinates can be detected accurately or not. It might be possible that a person might have a detection confidence of 0.8 but since a few joints are partially hidden
     min_pose_presence_confidence might be below the threshold of 0.5 and hence will be rejected. """
 
+    POSE_CONNECTIONS = [
+        (11, 12), (11, 13), (13, 15), (12, 14), (14, 16),
+        (11, 23), (12, 24), (23, 24),
+        (23, 25), (25, 27), (27, 29), (27, 31),
+        (24, 26), (26, 28), (28, 30), (28, 32),
+        (29, 31), (30, 32),
+    ] #This is a dictionary that basically contains pairs of connections between landmarks
+
     cap = cv2.VideoCapture(video_path) #VideoCapture() creates an object that lets you read a video file frame by frame
     if not cap.isOpened():
         raise FileNotFoundError(f"Cannot open video: {video_path}")
 
     #FPS is required since the video mode of mediapipe tasks api requires a time stamp which is achieved by converting frame number into time
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0   #fallback if fps not in metadata
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    invalid_count = 0
+    paused = False
+
+    GREEN = (0, 255, 0)
+    RED = (0, 0, 255)
+    YELLOW = (0, 255, 255)
+    CYAN = (255, 255, 0)
+    WHITE = (255, 255, 255)
 
     with vision.PoseLandmarker.create_from_options(options) as detector: #Here we actually load the pose detector model that was downloaded
         frame_idx = 0 #Initial index
         while True: #Loop runs until the video ends
-            ret, frame = cap.read() #Here we read each frame one by one. It returns two things - ret (boolean value) it signifies whether the frame was read successfully or not (true or false) and frame, that is, the actual image - a dictionary that stores all the pixels as RGB values.
-            if not ret: #If the frame is not available - it indicates the end of the video and hence we break out of the loop
-                break
+            if not paused: 
+                ret, frame = cap.read() #Here we read each frame one by one. It returns two things - ret (boolean value) it signifies whether the frame was read successfully or not (true or false) and frame, that is, the actual image - a dictionary that stores all the pixels as RGB values.
+                if not ret: #If the frame is not available - it indicates the end of the video and hence we break out of the loop
+                    break
 
-            #OpenCV stores images in BGR format but mediapipe tasks requires the normal RGB format. Hence conversion is important
-            rgb      = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb) #Mediapipe Tasks API cannot directly use NumPy/OpenCV arrays. It expects its own image object, so we convert rgb to image object. Frame is not an object - it is a numpy array which stores the pixel values of an image.
-            """Mediapipe tasks api does not directly accept a frame and hence conversion is done to an image object. mp.Image object stores: Data - pixel data, image width, image height, image format (RGB). Methods: image_format(), numpy_view()"""
+                #OpenCV stores images in BGR format but mediapipe tasks requires the normal RGB format. Hence conversion is important
+                rgb      = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb) #Mediapipe Tasks API cannot directly use NumPy/OpenCV arrays. It expects its own image object, so we convert rgb to image object. Frame is not an object - it is a numpy array which stores the pixel values of an image.
+                """Mediapipe tasks api does not directly accept a frame and hence conversion is done to an image object. mp.Image object stores: Data - pixel data, image width, image height, image format (RGB). Methods: image_format(), numpy_view()"""
+                #VIDEO mode needs a monotonically-increasing timestamp in ms. Time = frame number/fps and since the time is required in milliseconds - it is multiplied by 1000. Time stamps are important for tracking between frames, without time stamps tracking is impossible.
+                timestamp_ms = int(frame_idx * 1000 / fps)
+                result = detector.detect_for_video(mp_image, timestamp_ms) #Here, we actually input the image and the time stamp into the mediapipe pose detection model. Internally mediapipe detects person, estimates pose landmarks and tracks coordinates using the previous frame.
 
-            #VIDEO mode needs a monotonically-increasing timestamp in ms. Time = frame number/fps and since the time is required in milliseconds - it is multiplied by 1000. Time stamps are important for tracking between frames, without time stamps tracking is impossible.
-            timestamp_ms = int(frame_idx * 1000 / fps)
-            result = detector.detect_for_video(mp_image, timestamp_ms) #Here, we actually input the image and the time stamp into the mediapipe pose detection model. Internally mediapipe detects person, estimates pose landmarks and tracks coordinates using the previous frame.
+                row = {"frame": frame_idx, "detected": False} #Stores information about the current frame
 
-            row = {"frame": frame_idx, "detected": False} #Stores information about the current frame
+                #result.pose_landmarks is a list of poses; [0] = first (only) person. lm is a mediapipe landmark object that contains: x coordinate, y coordinate, z coordinate, visibility and presence.
+                """lm_indices = { "shoulder":11, "hip":23, "knee":25, "ankle":27, "foot":3 } .items() gives: ("shoulder",11), ("hip",23), ("knee",25), ("ankle",27), ("foot",31) """
+                if result.pose_landmarks and len(result.pose_landmarks) > 0:
+                    lms = result.pose_landmarks[0]          #list of NormalizedLandmark
 
-            #result.pose_landmarks is a list of poses; [0] = first (only) person. lm is a mediapipe landmark object that contains: x coordinate, y coordinate, z coordinate, visibility and presence.
-            """lm_indices = { "shoulder":11, "hip":23, "knee":25, "ankle":27, "foot":3 } .items() gives: ("shoulder",11), ("hip",23), ("knee",25), ("ankle",27), ("foot",31) """
-            if result.pose_landmarks and len(result.pose_landmarks) > 0:
-                lms = result.pose_landmarks[0]          #list of NormalizedLandmark
-                for joint, idx in lm_indices.items():
-                  lm = lms[idx]
-                  row[f"{joint}_x"]   = lm.x #f-string creates dynamic keys/ columns in the dataset.
-                  row[f"{joint}_y"]   = lm.y
-                  row[f"{joint}_vis"] = lm.visibility
-                row["detected"] = True
-            else:
-                for joint in lm_indices:
-                    row[f"{joint}_x"]   = np.nan
-                    row[f"{joint}_y"]   = np.nan
-                    row[f"{joint}_vis"] = 0.0
+                    valid = is_valid_leg(lms, lm_indices, side)
 
-            records.append(row)
-            frame_idx += 1
+                    if visualize:
+                        vis_frame = frame.copy()
+                        
+                        #POSE_CONNECTIONS is a predefined set of landmark pairs provided by MediaPipe. Each pair specifies which two body landmarks should be connected by a line to form the skeleton.
+                        for s_idx, e_idx in POSE_CONNECTIONS: #Here s_idx and e_idx represents the start and end index between which the connections need to be made respectively. 
+                            if (s_idx < len(lms) and e_idx < len(lms) and  #This condition checks whether the landmarks are valid or not
+                                lms[s_idx].visibility > 0.3 and #Visibility of the start and end index is checked
+                                lms[e_idx].visibility > 0.3):
+                                pixel_of_s = (int(lms[s_idx].x * width), #Here we calculate the pixel coordinates of the starting landmark so that accordingly the coordinate can be displayed on the screen.
+                                              #x coordinate is multiplied with the width of the frame and y coordinate is multiplied with the height of the frame
+                                      int(lms[s_idx].y * height))
+                                pixel_of_e = (int(lms[e_idx].x * width),
+                                      int(lms[e_idx].y * height))
+                                cv2.line(vis_frame, pixel_of_s, pixel_of_e, (150, 150, 150), 1) #Here we draw a line between the starting landmark and the ending landmark 
+                                #cv2.line(image, start_point, end_point, color, thickness)
+                        joint_labels = {
+                            "shoulder": "SHO",
+                            "hip":      "HIP",
+                            "knee":     "KNEE",
+                            "ankle":    "ANK",
+                            "foot":     "FOOT",
+                        }
+                        #lm_indices is a dictionary that stores the mapping between the joint names and their corresponding MediaPipe landmark indices.
+                        #.items() returns the joint and index of the landmark. Joint stores the joint name and idx stores the index of the mediapipe landmark
+                        for joint, idx in lm_indices.items():
+                            lm = lms[idx] #The landmark object - lm, contains several attributes like .x, .y, .visibility, etc.
+                            px = int(lm.x * width) #Convert the x coordinate into pixel coordinates by mutliplying it with the width of the frame
+                            py = int(lm.y * height) #Convert the y coordinate into pixel coordinates by multiplying it with the height of the frame
+                            colour = GREEN if valid else RED
+                            cv2.circle(vis_frame, (px, py), 8, colour, -1) #Show a circle on the px and py coordinates 
+                            cv2.putText(vis_frame, joint_labels[joint], #Display the joint name on screen close to the pixel coordinates of the landmark for a particular joint
+                                        (px + 10, py - 10),
+                                        cv2.FONT_HERSHEY_SIMPLEX,
+                                        0.5, colour, 2)
+                            
+                        if valid: #If the validity condition is passed the following text will be displayed on the screen. 
+                            cv2.putText(vis_frame, "VALID LEG",
+                                        (20, 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        GREEN, 2)
+                        else: #If the above condition is not satisfied then the following text is displayed on the screen 
+                            cv2.putText(vis_frame, "REJECTED — BENT LEG",
+                                        (20, 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        RED, 2)
+                        hip_lm  = lms[lm_indices["hip"]] #lms is the landmark object that has attributes like .x, .y and .visibility. lm_indices["hip"] gives us the landmark of the hip, which might be 23. We could have written lms[23] 
+                        #directly but writing it this way makes it more readable. hip_lm contains all the information required (such x, y and visibility data) about the hip landmark of the detected side 
+                        knee_lm = lms[lm_indices["knee"]]
+                        ank_lm  = lms[lm_indices["ankle"]]
+                        sho_lm  = lms[lm_indices["shoulder"]]
 
+                        hip_arr  = np.array([hip_lm.x,  hip_lm.y]) #We then create a np array of the x and y coordinates of the landmarks so that mathematical calculations like angle calculations can be performed. 
+                        knee_arr = np.array([knee_lm.x, knee_lm.y])
+                        ank_arr  = np.array([ank_lm.x,  ank_lm.y])
+                        sho_arr  = np.array([sho_lm.x,  sho_lm.y])
+
+                        def cal_angle(a, b, c): #Here we calculate the angles to display on the screen  
+                            ba = a - b; bc = c - b
+                            d  = np.linalg.norm(ba)*np.linalg.norm(bc)+1e-8
+                            return float(np.degrees(
+                                np.arccos(np.clip(np.dot(ba,bc)/d,-1,1))))
+
+                        hip_angle  = cal_angle(sho_arr, hip_arr, knee_arr)
+                        knee_angle = cal_angle(hip_arr, knee_arr, ank_arr)
+
+                        #Display the calculated knee and hip angles 
+                        cv2.putText(vis_frame,
+                            f"Hip: {hip_angle:.1f}  Knee: {knee_angle:.1f}",
+                            (20, height - 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
+                        #Display the visibility of key angles 
+                        cv2.putText(vis_frame,
+                            f"Vis — Hip:{hip_lm.visibility:.2f}  "
+                            f"Knee:{knee_lm.visibility:.2f}  "
+                            f"Ankle:{ank_lm.visibility:.2f}",
+                            (20, height - 20), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+                            (200, 200, 200), 1)
+
+                        #Here we display the frame number and also the number of frames that have been rejected 
+                        cv2.putText(vis_frame,
+                            f"Frame: {frame_idx}  "
+                            f"Invalid: {invalid_count}",
+                            (width - 300, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65,
+                            (200, 200, 200), 2)
+                        
+                        if paused:
+                            cv2.putText(vis_frame, "PAUSED",
+                                        (width//2 - 60, 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        WHITE, 2)
+
+                        cv2.imshow("Extraction Visualiser", vis_frame)
+
+                    if valid: 
+                        for joint, idx in lm_indices.items():
+                            #lm_indices is a dictionary that stores the mapping between the joint names and their corresponding MediaPipe landmark indices.
+                            #.items() returns the joint and index of the landmark. Joint stores the joint name and idx stores the index of the mediapipe landmark
+                            lm=lms[idx] #Each landmark object - lm, contains several attributes such as .x, .y, .visibility, etc.
+                            row[f"{joint}_x"] = lm.x
+                            row[f"{joint}_y"] = lm.y
+                            row[f"{joint}_vis"] = lm.visibility
+                        row["detected"] = True
+
+                    else:
+                        for joint in lm_indices:
+                            row[f"{joint}_x"] = np.nan
+                            row[f"{joint}_y"] = np.nan
+                            row[f"{joint}_vis"] = 0.0
+                        invalid_count +=1 
+                else: #This condition runs when no human is detected in the frame and all the landmarks are 0
+                    for joint in lm_indices:
+                        row[f"{joint}_x"]   = np.nan
+                        row[f"{joint}_y"]   = np.nan
+                        row[f"{joint}_vis"] = 0.0
+
+                records.append(row) #Append data to the records array 
+                frame_idx += 1 #Increment the frame number
+            #Basic commands 
+            if visualize:
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord('q'):
+                    print("  Visualiser quit early by user")
+                    break
+                elif key == ord(' '):
+                    paused = not paused
+                elif key == ord('s'):
+                    fname = f"extract_frame_{frame_idx}.jpg"
+                    cv2.imwrite(fname, vis_frame)
+                    print(f"  Screenshot saved → {fname}")
+        if visualize:
+            cv2.destroyAllWindows()
     cap.release() #After the video ends, we close the file
 
     df = pd.DataFrame(records).set_index("frame") #pandas converts list into a table and the frame number is set as the index
@@ -171,7 +339,10 @@ Methods: read(), isOpened(), release(), get()"""
     df[coord_cols] = df[coord_cols].ffill(limit=5).bfill(limit=5)
 
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
+    valid_rate = 100 - (invalid_count/frame_idx*100)
     print(f"  {frame_idx} frames | detection rate: {detection_rate:.1f}%")
+    print(f"  Spatial validation: {invalid_count} frames rejected "
+          f"({100-valid_rate:.1f}% of detected frames)")
     if detection_rate < 70:
         print("  WARNING: low detection rate — check video angle / lighting")
 
@@ -244,7 +415,7 @@ def smooth_angles(angle_df: pd.DataFrame) -> pd.DataFrame:
 
 """Rep Detection Logic"""
 
-def detect_reps(knee_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy array that stores knee angles across video frames
+def detect_reps(hip_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy array that stores knee angles across video frames
     """
     The major change made here is that instead of looking for peak -> valley -> peak and counting this as one rep we shift to a more robust approach where
     instead we look for the max angle before and after a valley and that is treated as the rep boundary. Because it is not necessary that a patient might have the same ROM as required by the find_peaks() due to which this function
@@ -254,7 +425,7 @@ def detect_reps(knee_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy 
     """
     #Valleys = minimum knee angle = peak flexion. The find_peaks() can only find maxima, hence we take -knee_angles to find the minima
     valleys, _ = find_peaks(
-        -knee_angles,
+        -hip_angles,
         prominence = REP_MIN_PROMINENCE, #Rep prominence is the minimum change in angle that will be counted as a rep
         distance   = REP_MIN_DISTANCE,
     )
@@ -266,17 +437,17 @@ def detect_reps(knee_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy 
     #Peaks = maximum knee angle = full extension. Here we find the maxima
     #Find the max angle before the first valley. That is designated as the initial rep boundary
     #np.argmax returns the index of the maxima. Basically we find the all the knee_angles before the valley point and then using np.argmax extract the maxima from those points.
-    boundary_peaks = [int(np.argmax(knee_angles[: valleys[0]]))]
+    boundary_peaks = [int(np.argmax(hip_angles[: valleys[0]]))]
 
     #Find the max angle between consecutive valleys since that is marked as the latter rep boundary, that is, after the valley
     for i in range(len(valleys) - 1): #We are comparings pairs of valleys. Between two consecutive valleys there is one peak which marks the end of rep 1 and the start of rep 2
-        window     = knee_angles[valleys[i] : valleys[i + 1]] #We extract all the knee angles between the two valleys
+        window     = hip_angles[valleys[i] : valleys[i + 1]] #We extract all the knee angles between the two valleys
         local_max  = int(np.argmax(window)) + valleys[i] #We find the maxima from the extracted window using np.argmax. This returns the index of the maxima which is added to the valley
         #before it since the index returned is local to that window and hence it needs to be added to the valley before to get the real frame.
         boundary_peaks.append(local_max)
 
     #After last valley: max in [last valley → end]. It finds the boundary of the last rep by finding the max angle
-    last_window = knee_angles[valleys[-1] :] #valleys[-1] indicates the last element of the array. We consider all frames from the last valley to the end of the video and hence extract all knee angles between those frames.
+    last_window = hip_angles[valleys[-1] :] #valleys[-1] indicates the last element of the array. We consider all frames from the last valley to the end of the video and hence extract all knee angles between those frames.
     boundary_peaks.append(int(np.argmax(last_window)) + valleys[-1]) #Similarly, we find the maxima in the window and extract its index which is added to the index of the last valley to get the real frame number
     #enumerate() works similar to iterrows() in terms that both return the index and value at that location but enumerate() works on data types like arrays, lists, tuples and returns simple values whereas, iterrows() work only on pandas data frames
     #and return the index of the row and all the data of a row, so a dictionary of data unlike a simple value in the case of enumerate().
@@ -287,7 +458,7 @@ def detect_reps(knee_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy 
         start = boundary_peaks[i] #The first peak is the start of the first rep
         end   = boundary_peaks[i + 1] #The end of this rep and start of the next rep.
 
-        rep_range = knee_angles[start] - knee_angles[valley] #ROM is calculated as the difference between the angles at extension and flexion
+        rep_range = hip_angles[start] - hip_angles[valley] #ROM is calculated as the difference between the angles at extension and flexion
         if rep_range < REP_MIN_PROMINENCE:
             print(f"  Skipping shallow valley at frame {valley} "
                   f"(range={rep_range:.1f}° < {REP_MIN_PROMINENCE}°)") #Skip if flexion depth is too shallow. For example - start angle = 180, valley = 170. Therefore, difference = 10 which is less than 15. So not detected as a real rep
@@ -306,7 +477,7 @@ def detect_reps(knee_angles: np.ndarray) -> list[dict]: #knee_angles is a numpy 
 """State Assignment"""
 
 def assign_states(
-    knee_angles: np.ndarray,
+    hip_angles: np.ndarray,
     start: int,
     valley: int,
     end: int,
@@ -325,7 +496,7 @@ def assign_states(
 
     Returns integer array of length (end − start + 1).
     """
-    rep_angles   = knee_angles[start : end + 1] #Return knee angles of that rep
+    rep_angles   = hip_angles[start : end + 1] #Return hip angles of that rep
     rep_max      = rep_angles.max() #Compute the max angle - fully extended
     rep_min      = rep_angles.min() #Compute the min angle - maximum flexion
     rep_range    = rep_max - rep_min + 1e-8 #1e-8 is a very small number to avoid division by zero. For example: rep_max = 180, rep_min = 180 then the range of motion would be 0
@@ -343,13 +514,13 @@ def assign_states(
 
     for i, angle in enumerate(rep_angles): #assign states
         if angle >= thresh_high:
-            states[i] = 1                            #S1 — Extended
+            states[i] = 1                            #S1 — Resting Position
         elif angle <= thresh_low:
-            states[i] = 3                            #S3 — Peak Flexion
+            states[i] = 3                            #S3 — Maximum Elevation
         elif i <= valley_local:
-            states[i] = 2                            #S2 — Descending
+            states[i] = 2                            #S2 — Leg Lifting Upward
         else:
-            states[i] = 4                            #S4 — Ascending
+            states[i] = 4                            #S4 — Leg Lowering
 
     return states
 
@@ -436,8 +607,8 @@ def compute_rep_features(
     row["pelvic_lift_max"] = row["S1_pelvic_mean"] - np.nanmin([
         row["S2_pelvic_min"], row["S3_pelvic_min"], row["S4_pelvic_min"]
     ])
-    row["knee_rom"] = row["S1_knee_mean"] - row["S3_knee_min"]
-    row["hip_compensation"] = row["S3_hip_mean"] - row["S1_hip_mean"]
+    row["hip_rom"] = row["S1_hip_mean"] - row["S3_hip_mean"]
+    row["knee_deviation"] = row["S1_knee_mean"] - row["S3_knee_min"]
     row["S2_S4_speed_ratio"] = row["S2_duration"]/(row["S4_duration"]+1e-8) #This feature ensures that the speed of ascent and descent is not abnormal and uncontrolled with respect to each other
 
     return row
@@ -463,7 +634,7 @@ def process_video(
     #1. Landmarks. This function uses mediapipe tasks. The input is the video and side. Internally mediapipe detects a person with the highest confidence,
     #extracts joints coordinates (x&y) and stores it in a dataframe - lm_df
     print("\n[1/5] Extracting landmarks …")
-    lm_df = extract_landmarks(video_path, side)
+    lm_df = extract_landmarks(video_path, side, visualize=True)
 
     #2. Angles. Here we actually calculate the angles using raw joint coordinates.
     print("[2/5] Calculating joint angles …")
@@ -476,8 +647,8 @@ def process_video(
     #4. Reps. Reps are detected based on a tracking angle. In case of supine heel slides, the tracking angle is the knee angle since it has the highest
     #range or movement
     print("[4/5] Detecting reps …")
-    knee  = smooth_df["knee_angle"].values
-    reps  = detect_reps(knee) #The rep detection algorithm is called. Internally the valleys are found and peaks before and after the valley to identify rep boundaries
+    hip  = smooth_df["hip_angle"].values
+    reps  = detect_reps(hip) #The rep detection algorithm is called. Internally the valleys are found and peaks before and after the valley to identify rep boundaries
 
     if not reps: #If no rep detected, return empty data frame
         return pd.DataFrame()
@@ -491,16 +662,16 @@ def process_video(
         end    = rep["end_frame"]
         valley = rep["valley_frame"]
 
-        states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
+        states = assign_states(hip, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
         row    = compute_rep_features(smooth_df, rep, states, patient_id) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
         #Per-rep console summary
-        k_slice = knee[start : end + 1] #Extract only the knee angles for this rep
+        h_slice = hip[start : end + 1] #Extract only the knee angles for this rep
         print(
             f"  Rep {rep['rep_id']:>2} | frames {start}–{end} " #:>2 right alignment
-            f"| knee {k_slice.max():.1f}°→{k_slice.min():.1f}° " #print the rep's max and min for knee angle
+            f"| hip {h_slice.max():.1f}°→{h_slice.min():.1f}° " #print the rep's max and min for knee angle
             f"| "
             + "  ".join(f"S{s}={int((states == s).sum())}f" for s in range(1, 5)) #Prints how long a state lasts in terms of frames. S2 = 3f
         )
@@ -519,16 +690,16 @@ def process_video(
 lm_df    = extract_landmarks(VIDEO_PATH, SIDE)
 angle_df = calculate_angles(lm_df)
 smooth   = smooth_angles(angle_df)
-knee     = smooth["knee_angle"].values
-reps     = detect_reps(knee)
+hip     = smooth["hip_angle"].values
+reps     = detect_reps(hip)
 
 for rep in reps:
     print(f"Rep {rep['rep_id']}: valley at frame {rep['valley_frame']}, "
-          f"knee = {knee[rep['valley_frame']]:.1f}°")
+          f"hip = {hip[rep['valley_frame']]:.1f}°")
 
 """Diagnostic Plot (To identify if the code is properly marking reps or not, on the basis of the tracking angle)"""
 
-def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray): #Inputs to this function are smoothed angles, detected reps and a numpy array containing the knee angles
+def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], hip: np.ndarray): #Inputs to this function are smoothed angles, detected reps and a numpy array containing the knee angles
     """
     Plot knee angle time series with rep boundaries and states marked.
     Call after process_video() for visual sanity-check.
@@ -538,8 +709,8 @@ def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray):
     import matplotlib.patches as mpatches
 
     STATE_COLORS = {1: "steelblue", 2: "orange", 3: "tomato", 4: "mediumseagreen"}
-    STATE_NAMES  = {1: "S1 Extended", 2: "S2 Descending",
-                    3: "S3 Peak Flex", 4: "S4 Ascending"}
+    STATE_NAMES  = {1: "S1 Resting", 2: "S2 Leg Lifting",
+                    3: "S3 Peak Elevation", 4: "S4 Leg Lowering"}
 
     fig, axes = plt.subplots(4, 1, figsize=(14, 8), sharex=True) #Create a figure with 4 rows and 1 column. axes[0] stores the first graph, axes[1] stores the second graph
     #and axes[3] stores the 3rd graph. size of the figure is 14 inches in width and 8 inches in height. x axis (frame number) is same for all 4 graphs
@@ -557,7 +728,7 @@ def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray):
         start  = rep["start_frame"]
         end    = rep["end_frame"]
         valley = rep["valley_frame"]
-        states = assign_states(knee, start, valley, end)
+        states = assign_states(hip, start, valley, end)
 
         for i, s in enumerate(states):
             f = start + i #Convert local frame to real frame
@@ -566,14 +737,14 @@ def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray):
 
         #Rep valley marker. Draws a vertical colored line marking the valley in the rep
         axes[0].axvline(valley, color="red", lw=1, ls="--", alpha=0.7)
-        axes[0].text(valley, knee[valley] - 3, f"R{rep['rep_id']}",
+        axes[0].text(valley, hip[valley] - 3, f"R{rep['rep_id']}",
                      ha="center", fontsize=7, color="red")
 
     patches = [mpatches.Patch(color=c, label=n, alpha=0.5)
                for s, (c, n) in enumerate(
                    zip(STATE_COLORS.values(), STATE_NAMES.values()), 1)] #state colors and state names are paired
     axes[0].legend(handles=patches, fontsize=8, loc="upper right") #Legend is added to the top right corner
-    axes[0].set_title("Knee angle with rep states", fontsize=10) #title is provided to the graph
+    axes[0].set_title("Hip angle with rep states", fontsize=10) #title is provided to the graph
     axes[3].set_xlabel("Frame") #x label is set
 
     plt.tight_layout() #Prevents the overlapping of labels. Without this the titles may overlap
@@ -601,11 +772,11 @@ import matplotlib.pyplot as plt
 lm_df    = extract_landmarks(VIDEO_PATH, SIDE)
 angle_df = calculate_angles(lm_df)
 smooth   = smooth_angles(angle_df)
-knee     = smooth["knee_angle"].values
+hip     = smooth["hip_angle"].values
 
 plt.figure(figsize=(14, 4))
-plt.plot(knee)
-plt.title("Knee angle over time") #We do this to make sure how many valleys are present. Number of valleys = Number of reps
+plt.plot(hip)
+plt.title("Hip angle over time") #We do this to make sure how many valleys are present. Number of valleys = Number of reps
 plt.xlabel("Frame")
 plt.ylabel("Degrees")
 plt.grid(alpha=0.3)
