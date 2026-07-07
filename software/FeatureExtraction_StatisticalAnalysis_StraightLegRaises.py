@@ -157,8 +157,8 @@ Methods: read(), isOpened(), release(), get()"""
         raise FileNotFoundError(f"Cannot open video: {video_path}")
 
     #FPS is required since the video mode of mediapipe tasks api requires a time stamp which is achieved by converting frame number into time
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0   #fallback if fps not in metadata
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0 #fallback if fps not in metadata
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) 
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     invalid_count = 0
@@ -509,7 +509,7 @@ def assign_states(
     #thresh_low   = rep_min + STATE_BOUNDARY_FRAC * rep_range   #S3 boundary - maximum flexion
     valley_local = valley - start                              #index within slice. Find the valley within the rep so that we can distinguish whether the patient is moving into flexion or moving back to extension
 
-    n      = len(rep_angles)
+    n = len(rep_angles)
     states = np.zeros(n, dtype=int) #Create an array to store the states
 
     for i, angle in enumerate(rep_angles): #assign states
@@ -534,7 +534,7 @@ VIS_COLS = {
     "knee_angle":  "knee_vis",
     "hip_angle":   "hip_vis",
     "ankle_angle": "ankle_vis",
-    "pelvic_gap":  None,         # not angle-based, no visibility gate needed
+    "pelvic_gap":  None,         #not angle-based, no visibility gate needed
 } #A visibility threshold is added to ensure that only frames that have a visibility above the given thresholds for the key joints required would be considered and the frames with lower
 #visibility will be rejected.
 
@@ -587,12 +587,12 @@ def compute_rep_features(
             if vis_col is not None and vis_col in state_frames.columns:
                 vis_mask     = state_frames[vis_col] >= VIS_THRESHOLD
                 gated_frames = state_frames[vis_mask]
-                # Track how many frames were kept vs total
+                #Track how many frames were kept vs total
                 row[f"S{s}_{label}_vis_frames"] = int(vis_mask.sum())
             else:
                 gated_frames = state_frames
 
-            # Use gated frames for stats, fall back to NaN if all frames dropped
+            #Use gated frames for stats, fall back to NaN if all frames dropped
             vals = (
                 gated_frames[col].values
                 if len(gated_frames) > 0
@@ -686,12 +686,12 @@ def process_video(
     print(f"\n  Done: {len(result_df)} rep(s) × {len(result_df.columns)} columns")
     return result_df
 
- #To check how many reps were detected and the position of the valley
-lm_df    = extract_landmarks(VIDEO_PATH, SIDE)
+#To check how many reps were detected and the position of the valley
+lm_df = extract_landmarks(VIDEO_PATH, SIDE)
 angle_df = calculate_angles(lm_df)
-smooth   = smooth_angles(angle_df)
-hip     = smooth["hip_angle"].values
-reps     = detect_reps(hip)
+smooth = smooth_angles(angle_df)
+hip = smooth["hip_angle"].values
+reps = detect_reps(hip)
 
 for rep in reps:
     print(f"Rep {rep['rep_id']}: valley at frame {rep['valley_frame']}, "
