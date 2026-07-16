@@ -1,13 +1,19 @@
 #This is the feature extraction code for shoulder flexion. This exercise is recorded from the side view and focuses on the range of motion of the shoulder joint.
 #The key angles in this exercise include - 1. Shoulder Flexion, 2. Elbow Angle, 3. Trunk Lean Angle, 4. Wrist position relative to elbow, 5. Shoulder Elevation
 #Here we basically extract important coordinates from each frame which are used to calculate the angles formed in that frame using the 3 point formula.
-#The tracking angle is shoulder flexion. Shoulder flexion angle starts at 180 (peak) and can go upto 60 degrees (valley)
-#For rep detection we use a tracking angle which undergoes the most amount of movement. Peaks or valleys are used to detect reps. In this exercise the peaks are the boundaries (starting and ending) of the reps.
-#The valleys (lower angle values) are the midpoint of the exercise. Once the rep is detected, the frames for a particular rep are isolated. The rep frames are further divided into states. The state classification is done so that errors
+#The tracking angle is shoulder flexion. Shoulder flexion angle starts at 0 (valley) and can go upto 120-150 degrees (peak)
+#For rep detection we use a tracking angle which undergoes the most amount of movement. Peaks or valleys are used to detect reps. In this exercise the valleys are the boundaries (starting and ending) of the reps.
+#The peaks (higher angle values) are the midpoint (When the hand is overhead) of the exercise. Once the rep is detected, the frames for a particular rep are isolated. The rep frames are further divided into states. The state classification is done so that errors
 #in a particular rep can be specifiec to a particular part of the exercise.
 #S1 - resting, S2 - Ascending up, S3 - Hand up, S4 - Descending down. The statistics for a particular state are calculated and taken as a feature. 
 #Certain factors like rom and trunk lean are calculated keeping in mind the baseline which is calculated when the body is at rest. This is to avoid giving false errors in cases like kyphosis, where the spine is by default bent forward 
 #changing the resting position of the shoulder from that of a normal person. 
+
+#To do: 
+#Visualizer code - done 
+#Why shoulder angle 180 
+#extension? (not starting from 0)
+#Hip being occluded (jittering a little)
 
 import cv2
 import mediapipe as mp
@@ -39,16 +45,16 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = "videos/Shoulder_Flexion/Patient_127_R.mp4"
+VIDEO_PATH  = "videos/Shoulder_Flexion/Sayalee_SHF_R_2.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID  = "Patient_127_R"
-SIDE        = "right"   #Here we provide the side that is facing the camera 
+PATIENT_ID  = "Sayalee"
+SIDE = "right"   #Here we provide the side that is facing the camera 
 
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
 #Whereas the savitzky golay filter is a smoothing filter that reduces noise in data while preserving the overall shape, peaks, valleys and trends in the signal.
-SMOOTH_WINDOW = 21 #Smoothing window is set to 21, must be odd so that the middle value can be found easily. Points before and after the center value help estimate the smoothed points. For noiser signals, the value should be higher.
+SMOOTH_WINDOW = 11 #Smoothing window is set to 21, must be odd so that the middle value can be found easily. Points before and after the center value help estimate the smoothed points. For noiser signals, the value should be higher.
 #Here, we use 21 neighbouring points to estimate the center value. 10 before, current and 10 after
 SMOOTH_POLY   = 3 #Fit a cubic polynomial through those 21 points. It uses something called Least Squares Regression. The algorithm tries many possible curves and picks the one with the smallest overall error.
 #Basically the center value is smoothed using the polynomial and then the window is shifted by one position - this again changes the center and a new polynomial is used to find the smoothed value of the new center value. This process continues until all values are smoothed.
@@ -127,24 +133,15 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
     Stage 2 -> min_pose_presence_confidence
     Stage 3 -> min_tracking_confidence
     min_pose_detection_confidence only helps detect a person, not if the joint coordinates can be detected accurately or not. It might be possible that a person might have a detection confidence of 0.8 but since a few joints are partially hidden
-    min_pose_presence_confidence might be below the threshold of 0.5 and hence will be rejected. """
-
-    #Here we define the connections we want to display on the screen. 
-    UPPER_BODY_CONNECTIONS = [
-        (11, 12),                   #shoulders
-        (11, 13), (13, 15),         #left arm
-        (12, 14), (14, 16),         #right arm
-        (11, 23), (12, 24),         #torso sides
-        (23, 24),                   #hips
-    ]
+    min_pose_presence_confidence might be below the threshold of 0.5 and hence will be rejected. """    
 
     cap = cv2.VideoCapture(video_path) #Here we open the video that needs to be processed 
     if not cap.isOpened():
         raise FileNotFoundError(f"Cannot open video: {video_path}")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0 #Here we define the frames per second for the video. It is either extracted from the video data or is set to a default value of 30
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
+    #width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
+    #height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
 
     invalid_count = 0 #Count of frames that are treated as invalid
     paused = False #State of the video
@@ -162,6 +159,8 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                 if not ret: #If no frame is being returned, we break out of the loop. Video Ended
                     break
 
+                frame = cv2.resize(frame, (420, 720))
+                height, width, _ = frame.shape
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #OpenCV stores images in BGR format but mediapipe tasks requires the normal RGB format. Hence conversion is important
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb) #Mediapipe Tasks API cannot directly use NumPy/OpenCV arrays. It expects its own image object, so we convert rgb to image object. Frame is not an object - it is a numpy array which stores the pixel values of an image.
                 """Mediapipe tasks api does not directly accept a frame and hence conversion is done to an image object. mp.Image object stores: Data - pixel data, image width, image height, image format (RGB). Methods: image_format(), numpy_view()"""
@@ -182,17 +181,33 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         vis_frame = frame.copy()
 
                         #Draw the upper body skeleton. #POSE_CONNECTIONS is a predefined set of landmark pairs provided by MediaPipe. Each pair specifies which two body landmarks should be connected by a line to form the skeleton.
-                        for s_idx, e_idx in UPPER_BODY_CONNECTIONS: #Here s_idx and e_idx represents the start and end index between which the connections need to be made respectively.
-                            if (s_idx < len(lms) and e_idx < len(lms) and  #This condition checks whether the landmarks are valid or not
-                                lms[s_idx].visibility > 0.3 and #Visibility of the start and end index is checked
-                                lms[e_idx].visibility > 0.3):
-                                pixel_s = (int(lms[s_idx].x * width),
-                                      int(lms[s_idx].y * height)) #Here we calculate the pixel coordinates of the starting landmark so that accordingly the coordinate can be displayed on the screen.
-                                              #x coordinate is multiplied with the width of the frame and y coordinate is multiplied with the height of the frame
-                                pixel_e = (int(lms[e_idx].x * width),
-                                      int(lms[e_idx].y * height))
-                                cv2.line(vis_frame, pixel_s, pixel_e, (150, 150, 150), 1) #Here we draw a line between the starting landmark and the ending landmark 
-                                #cv2.line(image, start_point, end_point, color, thickness)
+                        left_arm = [[11, 13], [13, 15]]
+                        right_arm = [[12, 14], [14, 16]]
+                        torso = [[11, 23], [12, 24]]
+
+                        if side=="right":
+                           pixel_ra1_s = [int(lms[right_arm[0][0]].x*width), int(lms[right_arm[0][0]].y*height)]
+                           pixel_ra1_e = [int(lms[right_arm[0][1]].x*width), int(lms[right_arm[0][1]].y*height)]
+                           pixel_ra2_s = [int(lms[right_arm[1][0]].x*width), int(lms[right_arm[1][0]].y*height)]
+                           pixel_ra2_e = [int(lms[right_arm[1][1]].x*width), int(lms[right_arm[1][1]].y*height)]
+                           pixel_tr_s = [int(lms[torso[0][0]].x*width), int(lms[torso[0][0]].y*height)]
+                           pixel_tr_e = [int(lms[torso[0][1]].x*width), int(lms[torso[0][1]].y*height)]
+                           cv2.line(vis_frame, pixel_ra1_s, pixel_ra1_e, (150, 150, 150), 2)
+                           cv2.line(vis_frame, pixel_ra2_s, pixel_ra2_e, (150, 150, 150), 2)
+                           cv2.line(vis_frame, pixel_tr_s, pixel_tr_e, (150, 150, 150), 2)
+
+
+                        if side=="left":
+                           pixel_la1_s = [int(lms[left_arm[0][0]].x*width), int(lms[left_arm[0][0]].y*height)]
+                           pixel_la1_e = [int(lms[left_arm[0][1]].x*width), int(lms[left_arm[0][1]].y*height)]
+                           pixel_la2_s = [int(lms[left_arm[1][0]].x*width), int(lms[left_arm[1][0]].y*height)]
+                           pixel_la2_e = [int(lms[left_arm[1][1]].x*width), int(lms[left_arm[1][1]].y*height)]
+                           pixel_tl_s = [int(lms[torso[1][0]].x*width), int(lms[torso[1][0]].y*height)]
+                           pixel_tl_e = [int(lms[torso[1][1]].x*width), int(lms[torso[1][1]].y*height)]
+                           cv2.line(vis_frame, pixel_la1_s, pixel_la1_e, (150, 150, 150), 2)
+                           cv2.line(vis_frame, pixel_la2_s, pixel_la2_e, (150, 150, 150), 2)
+                           cv2.line(vis_frame, pixel_tl_s, pixel_tl_e, (150, 150, 150), 2)
+
                         #Draw key joints
                         joint_labels = {
                             "hip":      "HIP",
@@ -235,8 +250,11 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                             d  = np.linalg.norm(ba)*np.linalg.norm(bc)+1e-8
                             return float(np.degrees(
                                 np.arccos(np.clip(np.dot(ba,bc)/d,-1,1))))
-
-                        sho_angle = cal_angle(hip_arr, sho_arr, elb_arr)
+                        
+                        if side=="right":
+                          sho_angle = -1*(signed_angle_calculation_3pt(hip_arr, sho_arr, elb_arr))
+                        else:
+                          sho_angle = signed_angle_calculation_3pt(hip_arr, sho_arr, elb_arr)
                         elb_angle = cal_angle(sho_arr, elb_arr, wri_arr)
 
                         #Display the calculated angles 
@@ -249,9 +267,10 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         sho_vis = lms[lm_indices["shoulder"]].visibility
                         elb_vis = lms[lm_indices["elbow"]].visibility
                         wri_vis = lms[lm_indices["wrist"]].visibility
+                        hip_vis = lms[lm_indices["hip"]].visibility
                         cv2.putText(vis_frame,
                             f"Vis — Sho:{sho_vis:.2f}  "
-                            f"Elb:{elb_vis:.2f}  Wri:{wri_vis:.2f}",
+                            f"Elb:{elb_vis:.2f}  Wri:{wri_vis:.2f} Hip:{hip_vis:.2f}",
                             (20, height - 20),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.55,
                             (200, 200, 200), 1)
@@ -330,6 +349,28 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
 
     return df
 
+def smooth_landmarks(lm_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Smooth raw landmark coordinates before angle calculation.
+    This prevents jitter in one landmark from propagating into
+    multiple angle calculations that share that landmark.
+    
+    Apply lighter smoothing than angles since coordinates are
+    in normalised units (0-1) and the signal is already small.
+    """
+    out = lm_df.copy()
+
+    coord_cols = [c for c in lm_df.columns
+                  if c.endswith("_x") or c.endswith("_y")]
+
+    for col in coord_cols:
+        #Only smooth if enough non-NaN values exist
+        values = lm_df[col].values
+        if np.sum(~np.isnan(values)) > SMOOTH_WINDOW:
+            out[col] = savgol_filter(values, SMOOTH_WINDOW, SMOOTH_POLY)
+
+    return out
+
 #Currently the dataframe contains raw joint coordinates, we need joint angles therefore we calculate them using trignometry
 def _angle_3pt(a, b, c): #Here we calculate the angle formed by three points, the angle is calculated at point B
 #In the following step we get two vectors. Formula to get the angle - Cos theta = (ba.bc)/(|ba||bc|)
@@ -337,6 +378,14 @@ def _angle_3pt(a, b, c): #Here we calculate the angle formed by three points, th
     ba = a - b; bc = c - b
     denom = np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-8
     return float(np.degrees(np.arccos(np.clip(np.dot(ba, bc)/denom, -1, 1))))
+
+def signed_angle_calculation_3pt(a, b, c): #We do this so that we can calculate the negative angle when the patient while descending down moves into extension (past the neutral or 0 degree mark). 
+    #This is specifically only for the shoulder angle.
+    ba = a-b
+    bc = c-b
+    cross = ba[0]*bc[1]-ba[1]*bc[0]
+    dot = np.dot(ba, bc)
+    return float(np.degrees(np.arctan2(cross, dot)))
 
 #Trunk lean basically measures how much the torso leans forward
 def _trunk_lean(shoulder_xy, hip_xy):
@@ -393,10 +442,14 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame:
         wrist    = np.array([r["wrist_x"], r["wrist_y"]])
 
         torso_length = np.linalg.norm(shoulder - hip) + 1e-8 #This is calculated so that normalization can be performed 
+        if SIDE=="right":
+           shoulder_angle = -1 * (signed_angle_calculation_3pt(hip, shoulder, elbow))
+        else:
+           shoulder_angle = signed_angle_calculation_3pt(hip, shoulder, elbow)
 
         rows.append({
             "frame": frame_idx, #The functions are called and the data is added to the rows
-            "shoulder_angle": _angle_3pt(hip, shoulder, elbow),
+            "shoulder_angle": shoulder_angle,
             "elbow_angle": _angle_3pt(shoulder, elbow, wrist),
             "trunk_angle": _trunk_lean(shoulder, hip),
             "shoulder_height": _shoulder_elevation(shoulder, hip),
@@ -426,44 +479,41 @@ def detect_reps(shoulder_angles: np.ndarray) -> list[dict]:
     then finds the maximum angle (resting position) before and after
     each valley to define rep boundaries.
     """
-    valleys, _ = find_peaks(
-        -shoulder_angles,
+    peaks, _ = find_peaks(
+        shoulder_angles,
         prominence = REP_MIN_PROMINENCE, #Rep prominence is the minimum change in angle that will be counted as a rep
         distance   = REP_MIN_DISTANCE,
     )
 
-    if len(valleys) == 0:
-        print("  WARNING: no rep valleys found — try lowering REP_MIN_PROMINENCE")
+    if len(peaks) == 0:
+        print("No rep peaks found")
         return []
-
+    
+    boundary_rests = [int(np.argmin(shoulder_angles[:peaks[0]]))] #This is done so that we can accurately detect peaks of the initial and final reps. find peaks tends to miss these two reps since it does not have any data before it to compare with. 
     #Peaks = Shoulder Flexion Angle = Resting Position. Here we find the maxima
     #Find the max angle before the first valley. That is designated as the initial rep boundary
     #np.argmax returns the index of the maxima. Basically we find the all the shoulder_angles before the valley point and then using np.argmax extract the maxima from those points.
-    boundary_peaks = [int(np.argmax(shoulder_angles[:valleys[0]]))]
 
-    #Find the max angle between consecutive valleys since that is marked as the latter rep boundary, that is, after the valley
-    for i in range(len(valleys) - 1): 
-        window = shoulder_angles[valleys[i]:valleys[i+1]] #We are comparings pairs of valleys. Between two consecutive valleys there is one peak which marks the end of rep 1 and the start of rep 2
-        #We extract all the shoulder angles between the two valleys
-        local_max = int(np.argmax(window)) + valleys[i] #We find the maxima from the extracted window using np.argmax. This returns the index of the maxima which is added to the valley
-        #before it since the index returned is local to that window and hence it needs to be added to the valley before to get the real frame.
-        boundary_peaks.append(local_max)
-    #After last valley: max in [last valley → end]. It finds the boundary of the last rep by finding the max angle
-    last_window = shoulder_angles[valleys[-1]:] #valleys[-1] indicates the last element of the array. We consider all frames from the last valley to the end of the video and hence extract all knee angles between those frames.
-    boundary_peaks.append(int(np.argmax(last_window)) + valleys[-1]) #Similarly, we find the maxima in the window and extract its index which is added to the index of the last valley to get the real frame number
-    #enumerate() works similar to iterrows() in terms that both return the index and value at that location but enumerate() works on data types like arrays, lists, tuples and returns simple values whereas, iterrows() work only on pandas data frames
-    #and return the index of the row and all the data of a row, so a dictionary of data unlike a simple value in the case of enumerate().
-
-
-    reps = [] #Creates an array that later stores rep data
+    
     #Move through each rep/ valleys
-    for i, valley in enumerate(valleys): #enumerate returns the index and the value at that index
-        start = boundary_peaks[i] #The first peak is the start of the first rep
-        end = boundary_peaks[i+1] #The end of this rep and start of the next rep.
-        rep_range = shoulder_angles[start] - shoulder_angles[valley] #ROM is calculated as the difference between the angles at rest and flexion
+    for i in range(len(peaks)-1): #enumerate returns the index and the value at that index
+        window = shoulder_angles[peaks[i]:peaks[i+1]] #We are comparings pairs of valleys. Between two consecutive valleys there is one peak which marks the end of rep 1 and the start of rep 2
+        #We extract all the shoulder angles between the two valleys
+        local_min = int(np.argmin(window)) + peaks[i]
+        boundary_rests.append(local_min)
+        
+    last_window = shoulder_angles[peaks[-1]:]
+    boundary_rests.append(int(np.argmin(last_window)) + peaks[-1])
+
+    reps=[]
+    for i, peak in enumerate(peaks):
+        start = boundary_rests[i]
+        end = boundary_rests[i+1]
+
+        rep_range = shoulder_angles[peak] - shoulder_angles[start]
 
         if rep_range < REP_MIN_PROMINENCE:
-            print(f"Skipping shallow valley at frame {valley}"
+            print(f"Skipping shallow rep at frame {start}"
                   f"(range={rep_range:.1f}° < {REP_MIN_PROMINENCE}°)")
             continue
 
@@ -471,7 +521,7 @@ def detect_reps(shoulder_angles: np.ndarray) -> list[dict]:
         reps.append({
             "rep_id":       i + 1,
             "start_frame":  int(start),
-            "valley_frame": int(valley),
+            "peak_frame": peak,
             "end_frame":    int(end),
         })
 
@@ -479,14 +529,14 @@ def detect_reps(shoulder_angles: np.ndarray) -> list[dict]:
     return reps
 
 
-def assign_states(shoulder_angles, start, valley, end):
+def assign_states(shoulder_angles, start, peak, end):
     """
     Labels each frame in [start, end] with a state 1-4.
 
-    S1 - Resting: arm at side, shoulder near maximum angle
-    S2 - Lifting: arm rising, shoulder angle decreasing (before valley)
-    S3 - Peak: arm at maximum height, shoulder angle at minimum
-    S4 - Lowering: arm returning to side, shoulder angle increasing
+    S1 - Resting: arm at side, shoulder near minimum angle
+    S2 - Lifting: arm rising, shoulder angle increasing (after valley)
+    S3 - Peak: arm at maximum height, shoulder angle at maximum
+    S4 - Lowering: arm returning to side, shoulder angle decreasing 
     """
     rep_angles = shoulder_angles[start:end+1] #Shoulder angles of the rep are returned 
     rep_max = rep_angles.max() #Compute the max angle
@@ -495,19 +545,20 @@ def assign_states(shoulder_angles, start, valley, end):
     S1_EXIT = 10   #degrees below rep_max to exit S1
     S3_EXIT = 10   #degrees above rep_min to exit S3
 
-    thresh_high  = rep_max - S1_EXIT   #S1: within 10° of resting position
-    thresh_low   = rep_min + S3_EXIT   #S3: within 10° of peak elevation
-    valley_local = valley - start
+    thresh_low  = rep_min + S1_EXIT   #S1: within 10° of resting position
+    thresh_high   = rep_max - S3_EXIT   #S3: within 10° of peak elevation
+    #Since in this exercise the peaks are the overhead positions (maximum flexion we find the peaks instead of valleys in case of heel slides, SLR)
+    peak_local = peak - start
 
     n = len(rep_angles)
     states = np.zeros(n, dtype=int)
 
     for i, angle in enumerate(rep_angles):
-        if angle >= thresh_high:
+        if angle <= thresh_low:
             states[i] = 1            #S1 - Resting (arm at side)
-        elif angle <= thresh_low:
+        elif angle >= thresh_high:
             states[i] = 3            #S3 - Peak elevation
-        elif i <= valley_local:
+        elif i <= peak_local:
             states[i] = 2            #S2 - Lifting upward
         else:
             states[i] = 4            #S4 - Lowering back down
@@ -558,7 +609,7 @@ def compute_rep_features(angle_df, rep, states, patient_id):
         "rep_id":       rep["rep_id"],
         "start_frame":  start,
         "end_frame":    end,
-        "valley_frame": rep["valley_frame"],
+        "peak_frame": rep["peak_frame"],
         "rep_duration": end - start + 1,
     }
 
@@ -595,7 +646,7 @@ def compute_rep_features(angle_df, rep, states, patient_id):
     #How far the arm actually raised from its own starting position
     # his is the ROM achieved, expressed in degrees of shoulder movement
     row["shoulder_rom"] = (
-        row["S1_shoulder_mean"] - row["S3_shoulder_min"]
+        row["S3_shoulder_max"] - row["S1_shoulder_mean"]
     )
 
     #How much trunk lean developed beyond the patient's own resting posture
@@ -609,11 +660,11 @@ def compute_rep_features(angle_df, rep, states, patient_id):
 
     #How much the elbow bent beyond its starting position. S1 elbow may already be slightly less than 180° due to natural arm position
     #We measure deviation from that patient's own baseline
-    row["elbow_deviation_s2"] = (
-        row["S1_elbow_mean"] - row["S2_elbow_min"]
+    row["elbow_deviation_s2"] = abs(
+        row["S2_elbow_mean"] - row["S1_elbow_mean"]
     )
     row["elbow_deviation_s3"] = (
-        row["S1_elbow_mean"] - row["S3_elbow_min"]
+        row["S3_elbow_mean"] - row["S1_elbow_mean"]
     )
 
     #How much the shoulder shrugged from its own resting height. shoulder_height increases as shoulder rises toward the ear
@@ -642,31 +693,34 @@ def process_video(video_path, patient_id, side="right", output_csv=None):
     print(f"Patient : {patient_id} | Side: {side}")
     print(f"{'='*60}")
     #Here we call all the functions defined above 
-    print("\n[1/5] Extracting landmarks")
+    print("\n[1/6] Extracting landmarks")
     lm_df = extract_landmarks(video_path, side, visualize=False)
 
-    print("[2/5] Calculating angles")
-    angle_df = calculate_angles(lm_df)
+    print("[2/6] Smoothing landmarks")         
+    lm_df_smooth = smooth_landmarks(lm_df) 
 
-    print("[3/5] Smoothing")
+    print("[3/6] Calculating angles")
+    angle_df = calculate_angles(lm_df_smooth)
+
+    print("[4/6] Smoothing")
     smooth_df = smooth_angles(angle_df)
 
-    print("[4/5] Detecting reps")
+    print("[5/6] Detecting reps")
     shoulder = smooth_df["shoulder_angle"].values
     reps     = detect_reps(shoulder)
 
     if not reps:
         return pd.DataFrame()
 
-    print("[5/5] Segmenting states & computing features")
+    print("[6/6] Segmenting states & computing features")
     all_rows = []
 
     for rep in reps: #We loop through all the detected reps
         start = rep["start_frame"]
         end = rep["end_frame"]
-        valley = rep["valley_frame"]
+        peak = rep["peak_frame"]
 
-        states = assign_states(shoulder, start, valley, end)
+        states = assign_states(shoulder, start, peak, end)
         row = compute_rep_features(smooth_df, rep, states, patient_id)
         all_rows.append(row)
 
@@ -695,8 +749,8 @@ shoulder = smooth["shoulder_angle"].values
 reps = detect_reps(shoulder)
 
 for rep in reps:
-    print(f"Rep {rep['rep_id']}: valley at frame {rep['valley_frame']}, "
-          f"shoulder = {shoulder[rep['valley_frame']]:.1f}°")
+    print(f"Rep {rep['rep_id']}: Peak at frame {rep['peak_frame']}, "
+          f"shoulder = {shoulder[rep['peak_frame']]:.1f}°")
 
 
 def plot_rep_debug(smooth_df, reps, shoulder):
@@ -719,15 +773,15 @@ def plot_rep_debug(smooth_df, reps, shoulder):
     for rep in reps:
         start = rep["start_frame"]
         end = rep["end_frame"]
-        valley = rep["valley_frame"]
-        states = assign_states(shoulder, start, valley, end)
+        peak = rep["peak_frame"]
+        states = assign_states(shoulder, start, peak, end)
 
         for i, s in enumerate(states):
             f = start + i
             axes[0].axvspan(f, f+1, alpha=0.25, color=STATE_COLORS[s], linewidth=0)
 
-        axes[0].axvline(valley, color="red", lw=1, ls="--", alpha=0.7)
-        axes[0].text(valley, shoulder[valley] - 3, f"R{rep['rep_id']}", ha="center", fontsize=7, color="red")
+        axes[0].axvline(peak, color="red", lw=1, ls="--", alpha=0.7)
+        axes[0].text(peak, shoulder[peak] - 3, f"R{rep['rep_id']}", ha="center", fontsize=7, color="red")
 
     patches = [mpatches.Patch(color=c, label=n, alpha=0.5) for s, (c, n) in enumerate(zip(STATE_COLORS.values(), STATE_NAMES.values()), 1)]
     axes[0].legend(handles=patches, fontsize=8, loc="upper right")

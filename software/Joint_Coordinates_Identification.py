@@ -22,8 +22,8 @@ if not os.path.exists(MODEL_PATH):
     print("Done.")
 
 #Here we configure the basic properties of the video being processed
-VIDEO_PATH  = "videos/Straight_Leg_Raises/Patient_124_2.mp4"  #Path of the video to be processed
-SIDE       = "left"            #The side of joint coordinates that needs to be worked with
+VIDEO_PATH  = "videos/Supine_Heel_Slides/Patient_131_SHS_R.mp4"  #Path of the video to be processed
+SIDE = "right"            #The side of joint coordinates that needs to be worked with
 
 LANDMARK_INDICES = {
     "right": dict(shoulder=12, elbow=14, wrist=16, hip=24, knee=26, ankle=28, foot=32),

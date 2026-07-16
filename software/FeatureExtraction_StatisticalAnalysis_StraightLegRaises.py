@@ -25,9 +25,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH  = "videos/Straight_Leg_Raises/Patient_124_2.mp4"  #Path to the input video that needs to be analyzed
+VIDEO_PATH  = "videos/Straight_Leg_Raises/Patient_131_L.mp4"  #Path to the input video that needs to be analyzed
 OUTPUT_CSV  = "docs/straight_leg_raises_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID  = "Patient_124_2" #Unique patient ID
+PATIENT_ID  = "Patient_131_L" #Unique patient ID
 SIDE        = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
