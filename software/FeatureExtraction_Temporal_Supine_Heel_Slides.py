@@ -18,9 +18,9 @@ import numpy as np
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
 
-VIDEO_PATH="D:\Sayalee\Major_project\Dataset_Videos\Patient118.mp4"
-OUTPUT_PATH="D:\Sayalee\Major_project\Features\Supine_heel_slides_features.csv"
-SIDE="right"
+VIDEO_PATH="videos/Supine_Heel_Slides/Patient_124_SHS_L.mp4"
+OUTPUT_PATH="docs/supine_heel_slides.csv"
+SIDE="left"
 
 PATIENT_ID=1
 
@@ -37,7 +37,7 @@ LANDMARK_INDICES= {
 
 def extract_landmarks(video_path, side):
     base_options= python.BaseOptions(
-        model_asset_path= "D:\Sayalee\Major_project\models\pose_landmarker_heavy.task"
+        model_asset_path= "pose_landmarker_heavy.task"
     ) #also try with landmarker_heavy
     #BaseOptions is a configuration object that tells mediapipe how to load the model
     #It provides common model loading settings for all mediapipe tasks. All mediapipe tasks have some settings in common-

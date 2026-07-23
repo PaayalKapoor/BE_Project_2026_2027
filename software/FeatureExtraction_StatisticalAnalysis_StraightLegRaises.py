@@ -56,9 +56,7 @@ Bottom boundary (S3): Near maximum flexion
 100 + 12 = 112
 Therefore, 100 - 112 degree is classified as S3. Everything between 112 - 168 is classified as the middle state or S2 """
 #Therefore, this automatically adapts the state boundaries to each patient's movement range.
-STATE_BOUNDARY_FRAC = 0.15
 
-"""Extract Landmarks"""
 
 SIDE_LANDMARK_INDICES = {
     "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32),
@@ -67,7 +65,27 @@ SIDE_LANDMARK_INDICES = {
 
 print("SIDE_LANDMARKS set up successfully")
 
-"""Extract Landmarks"""
+def smooth_landmarks(lm_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Smooth raw landmark coordinates before angle calculation.
+    This prevents jitter in one landmark from propagating into
+    multiple angle calculations that share that landmark.
+    
+    Apply lighter smoothing than angles since coordinates are
+    in normalised units (0-1) and the signal is already small.
+    """
+    out = lm_df.copy()
+
+    coord_cols = [c for c in lm_df.columns
+                  if c.endswith("_x") or c.endswith("_y")]
+
+    for col in coord_cols:
+        #Only smooth if enough non-NaN values exist
+        values = lm_df[col].values
+        if np.sum(~np.isnan(values)) > SMOOTH_WINDOW:
+            out[col] = savgol_filter(values, SMOOTH_WINDOW, SMOOTH_POLY)
+
+    return out
 
 def is_valid_leg(lms, lm_indices, side="right"):
     hip_x   = lms[lm_indices["hip"]].x
@@ -633,28 +651,31 @@ def process_video(
 
     #1. Landmarks. This function uses mediapipe tasks. The input is the video and side. Internally mediapipe detects a person with the highest confidence,
     #extracts joints coordinates (x&y) and stores it in a dataframe - lm_df
-    print("\n[1/5] Extracting landmarks …")
+    print("\n[1/6] Extracting landmarks …")
     lm_df = extract_landmarks(video_path, side, visualize=True)
 
+    print("[2/6] Smoothing landmarks")         
+    lm_df_smooth = smooth_landmarks(lm_df)
+
     #2. Angles. Here we actually calculate the angles using raw joint coordinates.
-    print("[2/5] Calculating joint angles …")
-    angle_df = calculate_angles(lm_df)
+    print("[3/6] Calculating joint angles …")
+    angle_df = calculate_angles(lm_df_smooth)
 
     #3. Smooth. Here smoothing of the angles is performed using the savitzky golay filter
-    print("[3/5] Smoothing …")
+    print("[4/6] Smoothing")
     smooth_df = smooth_angles(angle_df)
 
     #4. Reps. Reps are detected based on a tracking angle. In case of supine heel slides, the tracking angle is the knee angle since it has the highest
     #range or movement
-    print("[4/5] Detecting reps …")
+    print("[5/6] Detecting reps")
     hip  = smooth_df["hip_angle"].values
-    reps  = detect_reps(hip) #The rep detection algorithm is called. Internally the valleys are found and peaks before and after the valley to identify rep boundaries
+    reps = detect_reps(hip) #The rep detection algorithm is called. Internally the valleys are found and peaks before and after the valley to identify rep boundaries
 
     if not reps: #If no rep detected, return empty data frame
         return pd.DataFrame()
 
     # 5. States + features
-    print("[5/5] Segmenting states & computing features …")
+    print("[6/6] Segmenting states & computing features …")
     all_rows = [] #Stores the final result
 
     for rep in reps: #Loops through all reps in reps

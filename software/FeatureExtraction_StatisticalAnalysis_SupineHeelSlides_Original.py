@@ -1,18 +1,3 @@
-#Feature Extraction Code for Supine Heel Slides: Here we extract important joint coordinates such as hip, knee, shoulder, foot and ankle per frame. These joint coordinates are smoothened using the savitzky-golay filter 
-#and then these smoothed coordinates are used to find key joint angles. One of these angles functions as the key tracking angle (the angle with the most movement in degrees). This tracking angle is analyzed to 
-#find the peaks and valleys in its data. The peak is the resting position (where the leg is fully extended) and valley is the flexed position of the leg (where the knee angle is minimum). The peaks and valleys in the data 
-#are found using python's find_peaks() function. Once the valleys in data are found, the maximum angles before and after the valley are found which then become the rep boundary for that particular rep. Once the reps are detected
-#the frames for those reps are isolated and then further divided into states. The angles for each frame of a state are used to calculate important statistics such as mean, min, max, range and standard deviation for that state. These statistics
-#in addition to some values like knee ROM, hip compensation and meta data become the final features in the dataset. 
-#A visibility threshold of 0.5 is set for each joint coordinate (knee, hip, shoulder, ankle and foot). This gating prevents low visibility frames from being included in calculations and corrupting data with noisy values. However, due to mediapipe's
-#low training on supine positions - it by default gives low visibility for certain landmarks such as knee, ankle and foot in the near collinear position (leg fully extended). This low visibility landmark does not signify that the landmark is occluded,
-#it indicates that mediapipe is not confident since this trend has been seen across different patient videos and specifically for State 4 and State 1 of the exercise (when knee angle is above 160). To avoid discarding real & valid data where the landmarks are
-#valid and jitter free - we use a function called gate_low_visibility() - which basically check if the patient is in the extension phase of the exercise (near collinear position), visibility is low and the coordinate is not jittering a lot. 
-#If the above 3 conditions are satisfied - then the frame is saved. The raw coordinate values are kept exactly as mediapipe gave them (unlike in case of rejected frames where the coordinate values along with the visibility parameter are nullified), and only
-#the visibility score is overriden to 1.0 so that it successfully bypasses the 0.5 visibility threshold in compute_rep_features() function. This bypassing is valid only for the frames near extension with a low confidence and little to no jitter. 
-#Frames that have low confidence in any other phase of the exercise are directly rejected. Their coordinate values and visibility score is set to NaN and then interpolated only so that the rep detection logic and savitzky golay filter works since 
-#with gaps the algorithm would break. For computing the final features the coordinates in these frames are not used since they do not pass the visibility threshold. (visibility < 0.5). 
-
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
@@ -42,7 +27,7 @@ download_model()
 
 VIDEO_PATH = "videos/Supine_Heel_Slides/Patient_121_SHS_R.mp4"  #Path to the input video that needs to be analyzed
 OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Patient_118_R" #Unique patient ID
+PATIENT_ID = "Gauri_L" #Unique patient ID
 SIDE = "right"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -56,8 +41,8 @@ SMOOTH_POLY = 3 #Fit a cubic polynomial through those 11 points. It uses somethi
 # 180 180 | 180 176 172 169 165 | 165 165 (Repeating boundary values)
 
 #Rep detection
-REP_MIN_PROMINENCE = 15 #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
-REP_MIN_DISTANCE = 20 #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
+REP_MIN_PROMINENCE = 15          #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
+REP_MIN_DISTANCE = 20          #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
 
 #Used to divide each rep into states. The code determines these states based on the knee angle range of a repetition.
 """ How it works - Suppose one rep has max angle = 180 (fully extended)
@@ -80,61 +65,25 @@ SIDE_LANDMARK_INDICES = {
 
 print("SIDE_LANDMARKS set up successfully")
 
-def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160, deviation_threshold=0.04, window=5):
-    #This function takes a data frame (lm_df) which stores the landmark coordinates and visibility scores. Each frame is one row of data.
-    #extension_angle_threshold indicates the near collinear position where mediapipe gives low visibility scores for landmarks such as knee, ankle and foot. 
-    #This low visibility score is not because of real occlusion but mediapipe's less training on supine positions. We have also set a deviation threshold, data points
-    #exceeding this limit are rejected and there by not saved. If the landmark moves less than this amount, it is assumed to be stable. For interpolation in case of the rejected 
-    #frames to maintain signal continuity, we calculate median using a window of 5 frames: 2 previous, current and 2 future frames. 
-    out = lm_df.copy() #Here we create a copy of the data frame so that the original data frame remains intact
-    hip, knee, ankle = out[["hip_x","hip_y"]].values, out[["knee_x","knee_y"]].values, out[["ankle_x","ankle_y"]].values #Read the hip, knee and ankle coordinate values so that we can calculate the knee angle using the 3 point formula. 
-    provisional_angle = np.array([
-        _angle_3pt(h,k,a) if not (np.isnan(h).any() or np.isnan(k).any() or np.isnan(a).any()) else np.nan
-        for h,k,a in zip(hip, knee, ankle)
-    ]) #Here we calculate the knee angle provided none of the landmark coordinates used in the 3 point formula are null 
-    near_extension = provisional_angle >= extension_angle_threshold #If the knee angle is greater than 160 then the value is set to True
-
-    joints = {c.rsplit("_vis",1)[0] for c in lm_df.columns if c.endswith("_vis")} #Here we find all the joints automatically. All landmarks in mediapipe are associated with three properties x & y coordinate and the visibility score. 
+def gate_low_visibility(lm_df: pd.DataFrame, vis_threshold: float = 0.4) -> pd.DataFrame:
+    """
+    Null out a joint's x/y for any frame where its own visibility is too
+    low, so a noisy/uncertain detection never enters the Savgol smoothing
+    window in the first place. The interpolation below then fills those
+    gaps using confident neighboring frames instead of smoothing over
+    garbage. Run this BEFORE smooth_landmarks.
+    """
+    out = lm_df.copy()
+    joints = {c.rsplit("_vis", 1)[0] for c in lm_df.columns if c.endswith("_vis")}
     for joint in joints:
-        vis_col, x_col, y_col = f"{joint}_vis", f"{joint}_x", f"{joint}_y"
-        low_conf = out[vis_col] < vis_threshold #Here we extract the frames that have low visibility scores for each angle 
+        vis_col = f"{joint}_vis"
+        low_conf = out[vis_col] < vis_threshold
+        out.loc[low_conf, f"{joint}_x"] = np.nan
+        out.loc[low_conf, f"{joint}_y"] = np.nan
 
-        #A rolling median is calculated here for comparison with the current frames values for estimation of deviation from its neighboring frames over a short centered window, 
-        #computed from RAW positions (no exclusion at all) — this is robust to a single bad frame without needing to guess which frames to trust ahead of time.
-        med_x = out[x_col].rolling(window, center=True, min_periods=1).median()
-        med_y = out[y_col].rolling(window, center=True, min_periods=1).median()
-        deviation = np.sqrt((out[x_col]-med_x)**2 + (out[y_col]-med_y)**2) #Deviation from the median is calculated 
-        consistent = deviation <= deviation_threshold #Here we check, if the deviation is less than the given threshold 
-
-        near_ext_mask = near_extension if joint in ("knee","ankle", "foot") else np.zeros(len(out), dtype=bool) #The three joints that jitter a lot during extension is knee, ankle and foot. 
-        rescued = low_conf & near_ext_mask & consistent #The frame will be rescued only if it has a low visibility score, is near extension and stable (not jittery)
-        reject = low_conf & ~rescued #else the frame is rejected
-
-        print(f"{joint}: low_conf={low_conf.sum()}, rescued={rescued.sum()}, rejected={reject.sum()}")
-
-        out.loc[reject, x_col] = np.nan #We set the rejected frame landmark coordinates to NaN
-        out.loc[reject, y_col] = np.nan
-        out[f"{joint}_vis_effective"] = out[vis_col]
-        out.loc[rescued, f"{joint}_vis_effective"] = 1.0 #For the rescued frame - we set the visibility score to 1.0 so that it bypasses the visibilty threshold of 0.5
-
-    coord_cols = [c for c in out.columns if c.endswith("_x") or c.endswith("_y")] #Here we interpolate the rejected frames only for signal continuity 
+    coord_cols = [c for c in out.columns if c.endswith("_x") or c.endswith("_y")]
     out[coord_cols] = out[coord_cols].interpolate(method="linear", limit_direction="both")
-
-    #Effective detection rate which is calculated after gating is performed. 
-    key_joint = "knee"   # use knee as the representative joint
-    valid_after_gating = out[f"{key_joint}_x"].notna().sum()
-    total_frames = len(out)
-    effective_rate = valid_after_gating / total_frames * 100
-
-    print(f"\n Effective detection rate after gating: "
-          f"{valid_after_gating}/{total_frames} frames ({effective_rate:.1f}%)")
-
-    if effective_rate < 70:
-        print("WARNING: less than 70% of frames usable after gating — "
-              "check clothing / occlusion / lighting")
-
     return out
-
 
 def smooth_landmarks(lm_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -232,13 +181,12 @@ Methods: read(), isOpened(), release(), get()"""
     # width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     # height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    #invalid_count = 0
+    invalid_count = 0
     paused = False
 
     GREEN = (0, 255, 0)
     YELLOW = (0, 255, 255)
     RED = (0, 0, 255)
-    ORANGE = (0, 165, 255)
     WHITE = (255, 255, 255)
 
     with vision.PoseLandmarker.create_from_options(options) as detector: #Here we actually load the pose detector model that was downloaded
@@ -295,6 +243,7 @@ Methods: read(), isOpened(), release(), get()"""
                             cv2.line(vis_frame, pixel_rl5_s, pixel_rl5_e, (150, 150, 150), 2)
                             cv2.line(vis_frame, pixel_torso_right_s, pixel_torso_right_e, (150, 150, 150), 2)
                             
+
                         if side=="left":
                             pixel_ll1_s = [int(lms[left_leg[0][0]].x*width), int(lms[left_leg[0][0]].y*height)]
                             pixel_ll1_e = [int(lms[left_leg[0][1]].x*width), int(lms[left_leg[0][1]].y*height)]
@@ -328,14 +277,12 @@ Methods: read(), isOpened(), release(), get()"""
                             py = int(lm.y * height)
                             color = GREEN if valid else RED
                             cv2.circle(vis_frame, (px, py), 8, color, -1)
-                            text= f"x:{lm.x:.2f} y:{lm.y:.2f}"
-                            cv2.putText(vis_frame, text, (px - 50, py - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                             cv2.putText(vis_frame, joint_labels[joint], (px + 10, py - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
                         
                         if valid:
                             cv2.putText(vis_frame, "Valid Leg", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, GREEN, 2)
                         else:
-                            cv2.putText(vis_frame, "Interpolated Later", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, RED, 2)
+                            cv2.putText(vis_frame, "Rejected", (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, RED, 2)
 
                         hip_lm = lms[lm_indices["hip"]]
                         knee_lm = lms[lm_indices["knee"]]
@@ -353,21 +300,28 @@ Methods: read(), isOpened(), release(), get()"""
                         hip_angle = _angle_3pt(sho_arr, hip_arr, knee_arr)
                         ankle_angle = _angle_3pt(knee_arr, ank_arr, foot_arr)
 
-                        cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, height-70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
-                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}", (20, height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+                        cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, height-50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
+                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} ", (20, height-20), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+                        cv2.putText(vis_frame, f"Frame: {frame_idx} " f"Invalid: {invalid_count} ", (width-300, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (200, 200, 200), 2)
 
                         if paused:
                             cv2.putText(vis_frame, "Paused", (width//2 - 60, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, WHITE, 2)
                         cv2.imshow("Extraction Visualizer", vis_frame) #cv2.imshow(window_name, image) this command basically shows a pop up window where an image or video is displayed 
                     
-                    
-                    for joint, idx in lm_indices.items():
-                        lm = lms[idx]
-                        row[f"{joint}_x"] = lm.x
-                        row[f"{joint}_y"] = lm.y
-                        row[f"{joint}_vis"] = lm.visibility
-                    row["detected"] = True
+                    if valid:
+                        for joint, idx in lm_indices.items():
+                            lm = lms[idx]
+                            row[f"{joint}_x"] = lm.x
+                            row[f"{joint}_y"] = lm.y
+                            row[f"{joint}_vis"] = lm.visibility
+                        row["detected"] = True
 
+                    else:
+                        for joint in lm_indices:
+                            row[f"{joint}_x"] = np.nan
+                            row[f"{joint}_y"] = np.nan
+                            row[f"{joint}_vis"] = 0.0
+                        invalid_count +=1
                 else:
                     for joint in lm_indices:
                         row[f"{joint}_x"]   = np.nan
@@ -376,6 +330,7 @@ Methods: read(), isOpened(), release(), get()"""
 
                 records.append(row) #Append data to the records array 
                 frame_idx += 1 #Increment the frame number
+
 
             #Basic commands 
             if visualize:
@@ -395,10 +350,25 @@ Methods: read(), isOpened(), release(), get()"""
     cap.release() #After the video ends, we close the file
 
     df = pd.DataFrame(records).set_index("frame") #pandas converts list into a table and the frame number is set as the index
-    
+
+    #Fill short detection gaps (≤ 5 consecutive frames). Here we select columns ending in _x and _y and fill small gaps by either forward filling or backward filling.
+    #In forward filling the values are filled with a known value before it. This is done for a maximum of 5 consecutive frames.
+    #In backward filling the values are filled with a known value after it. Forward fill handles missing middle values and backward fill handles missing beginning values.
+    coord_cols = [c for c in df.columns if c.endswith("_x") or c.endswith("_y")]
+    df[coord_cols] = df[coord_cols].ffill(limit=5).bfill(limit=5)
+    #Incase more than 5 consecutive frames are being rejected and get no landmark values, we perform linear interpolation
+    remaining_nan = df[coord_cols].isna().any(axis=1)
+    if remaining_nan.any():
+        run_id = (remaining_nan != remaining_nan.shift()).cumsum()
+        longest_gap = remaining_nan.groupby(run_id).sum().max()
+        print(f"  WARNING: {int(remaining_nan.sum())} frames still missing after "
+          f"5-frame fill — longest continuous gap = {int(longest_gap)} frames. "
+          f"Interpolating across it now.")
+
+        df[coord_cols] = df[coord_cols].interpolate(method="linear", limit_direction="both")
+
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
-    #Change this line in extract_landmarks():
-    print(f"  {frame_idx} frames | raw MediaPipe detection rate: {detection_rate:.1f}%")
+    print(f"  {frame_idx} frames | detection rate: {detection_rate:.1f}%")
     if detection_rate < 70:
         print("  WARNING: low detection rate — check video angle / lighting")
 
@@ -454,8 +424,8 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
             "ankle_angle": _angle_3pt(knee, ankle, foot),
             "pelvic_gap":  _pelvic_lift(hip, shoulder),
             "hip_vis":      r["hip_vis"],
-            "knee_vis":     r["knee_vis_effective"],
-            "ankle_vis":    r["ankle_vis_effective"],
+            "knee_vis":     r["knee_vis"],
+            "ankle_vis":    r["ankle_vis"],
             "shoulder_vis": r["shoulder_vis"],
         })
 
@@ -757,7 +727,6 @@ def process_video(
 
  #To check how many reps were detected and the position of the valley
 lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=True)
-lm_df = gate_low_visibility(lm_df) 
 angle_df = calculate_angles(lm_df)
 smooth = smooth_angles(angle_df)
 knee = smooth["knee_angle"].values
@@ -840,7 +809,6 @@ import matplotlib.pyplot as plt
 
 #To construct a graph of knee angle vs frames we need to extract the landmarks, calculate angles, smooth the angles and then extract the smoothed out knee angle values which are then used in the graph for plotting.
 lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=False)
-lm_df = gate_low_visibility(lm_df)
 angle_df = calculate_angles(lm_df)
 smooth = smooth_angles(angle_df)
 knee = smooth["knee_angle"].values
