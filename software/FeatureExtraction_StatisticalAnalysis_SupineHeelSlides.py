@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = "videos/Supine_Heel_Slides/Patient_121_SHS_R.mp4"  #Path to the input video that needs to be analyzed
+VIDEO_PATH = "videos/Supine_Heel_Slides/Yash_SHS_R.mp4"  #Path to the input video that needs to be analyzed
 OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Patient_118_R" #Unique patient ID
+PATIENT_ID = "Yash_SHS_R" #Unique patient ID
 SIDE = "right"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -249,7 +249,6 @@ Methods: read(), isOpened(), release(), get()"""
                 if not ret: #If the frame is not available - it indicates the end of the video and hence we break out of the loop
                    break
 
-                frame = cv2.resize(frame, (1000, 600))
                 height, width, _ = frame.shape
                 #OpenCV stores images in BGR format but mediapipe tasks requires the normal RGB format. Hence conversion is important
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -258,6 +257,9 @@ Methods: read(), isOpened(), release(), get()"""
                 #VIDEO mode needs a monotonically-increasing timestamp in ms. Time = frame number/fps and since the time is required in milliseconds - it is multiplied by 1000. Time stamps are important for tracking between frames, without time stamps tracking is impossible.
                 timestamp_ms = int(frame_idx * 1000 / fps)
                 result = detector.detect_for_video(mp_image, timestamp_ms) #Here, we actually input the image and the time stamp into the mediapipe pose detection model. Internally mediapipe detects person, estimates pose landmarks and tracks coordinates using the previous frame.
+
+                display_frame = cv2.resize(frame, (1200, 600))
+                display_height, display_width, _ = display_frame.shape
 
                 row = {"frame": frame_idx, "detected": False} #Stores information about the current frame
 
@@ -268,7 +270,7 @@ Methods: read(), isOpened(), release(), get()"""
                     valid = is_valid_leg(lms, lm_indices, side)
 
                     if visualize: 
-                        vis_frame = frame.copy()
+                        vis_frame = display_frame.copy()
 
                         right_leg = [(24, 26), (26, 28), (28, 30), (28, 32), (30, 32)]
                         left_leg = [(23, 25), (25, 27), (27, 29), (27, 31), (29, 31)]
@@ -276,18 +278,18 @@ Methods: read(), isOpened(), release(), get()"""
                         torso_right = [(12, 24)]
 
                         if side=="right":
-                            pixel_rl1_s = [int(lms[right_leg[0][0]].x*width), int(lms[right_leg[0][0]].y*height)]
-                            pixel_rl1_e = [int(lms[right_leg[0][1]].x*width), int(lms[right_leg[0][1]].y*height)]
-                            pixel_rl2_s = [int(lms[right_leg[1][0]].x*width), int(lms[right_leg[1][0]].y*height)]
-                            pixel_rl2_e = [int(lms[right_leg[1][1]].x*width), int(lms[right_leg[1][1]].y*height)]
-                            pixel_rl3_s = [int(lms[right_leg[2][0]].x*width), int(lms[right_leg[2][0]].y*height)]
-                            pixel_rl3_e = [int(lms[right_leg[2][1]].x*width), int(lms[right_leg[2][1]].y*height)]
-                            pixel_rl4_s = [int(lms[right_leg[3][0]].x*width), int(lms[right_leg[3][0]].y*height)]
-                            pixel_rl4_e = [int(lms[right_leg[3][1]].x*width), int(lms[right_leg[3][1]].y*height)]
-                            pixel_rl5_s = [int(lms[right_leg[4][0]].x*width), int(lms[right_leg[4][0]].y*height)]
-                            pixel_rl5_e = [int(lms[right_leg[4][1]].x*width), int(lms[right_leg[4][1]].y*height)]
-                            pixel_torso_right_s = [int(lms[torso_right[0][0]].x*width), int(lms[torso_right[0][0]].y*height)]
-                            pixel_torso_right_e = [int(lms[torso_right[0][1]].x*width), int(lms[torso_right[0][1]].y*height)]
+                            pixel_rl1_s = [int(lms[right_leg[0][0]].x*display_width), int(lms[right_leg[0][0]].y*display_height)]
+                            pixel_rl1_e = [int(lms[right_leg[0][1]].x*display_width), int(lms[right_leg[0][1]].y*display_height)]
+                            pixel_rl2_s = [int(lms[right_leg[1][0]].x*display_width), int(lms[right_leg[1][0]].y*display_height)]
+                            pixel_rl2_e = [int(lms[right_leg[1][1]].x*display_width), int(lms[right_leg[1][1]].y*display_height)]
+                            pixel_rl3_s = [int(lms[right_leg[2][0]].x*display_width), int(lms[right_leg[2][0]].y*display_height)]
+                            pixel_rl3_e = [int(lms[right_leg[2][1]].x*display_width), int(lms[right_leg[2][1]].y*display_height)]
+                            pixel_rl4_s = [int(lms[right_leg[3][0]].x*display_width), int(lms[right_leg[3][0]].y*display_height)]
+                            pixel_rl4_e = [int(lms[right_leg[3][1]].x*display_width), int(lms[right_leg[3][1]].y*display_height)]
+                            pixel_rl5_s = [int(lms[right_leg[4][0]].x*display_width), int(lms[right_leg[4][0]].y*display_height)]
+                            pixel_rl5_e = [int(lms[right_leg[4][1]].x*display_width), int(lms[right_leg[4][1]].y*display_height)]
+                            pixel_torso_right_s = [int(lms[torso_right[0][0]].x*display_width), int(lms[torso_right[0][0]].y*display_height)]
+                            pixel_torso_right_e = [int(lms[torso_right[0][1]].x*display_width), int(lms[torso_right[0][1]].y*display_height)]
                             cv2.line(vis_frame, pixel_rl1_s, pixel_rl1_e, (150, 150, 150), 2)
                             cv2.line(vis_frame, pixel_rl2_s, pixel_rl2_e, (150, 150, 150), 2)
                             cv2.line(vis_frame, pixel_rl3_s, pixel_rl3_e, (150, 150, 150), 2)
@@ -296,18 +298,18 @@ Methods: read(), isOpened(), release(), get()"""
                             cv2.line(vis_frame, pixel_torso_right_s, pixel_torso_right_e, (150, 150, 150), 2)
                             
                         if side=="left":
-                            pixel_ll1_s = [int(lms[left_leg[0][0]].x*width), int(lms[left_leg[0][0]].y*height)]
-                            pixel_ll1_e = [int(lms[left_leg[0][1]].x*width), int(lms[left_leg[0][1]].y*height)]
-                            pixel_ll2_s = [int(lms[left_leg[1][0]].x*width), int(lms[left_leg[1][0]].y*height)]
-                            pixel_ll2_e = [int(lms[left_leg[1][1]].x*width), int(lms[left_leg[1][1]].y*height)]
-                            pixel_ll3_s = [int(lms[left_leg[2][0]].x*width), int(lms[left_leg[2][0]].y*height)]
-                            pixel_ll3_e = [int(lms[left_leg[2][1]].x*width), int(lms[left_leg[2][1]].y*height)]
-                            pixel_ll4_s = [int(lms[left_leg[3][0]].x*width), int(lms[left_leg[3][0]].y*height)]
-                            pixel_ll4_e = [int(lms[left_leg[3][1]].x*width), int(lms[left_leg[3][1]].y*height)]
-                            pixel_ll5_s = [int(lms[left_leg[4][0]].x*width), int(lms[left_leg[4][0]].y*height)]
-                            pixel_ll5_e = [int(lms[left_leg[4][1]].x*width), int(lms[left_leg[4][1]].y*height)]
-                            pixel_torso_left_s = [int(lms[torso_left[0][0]].x*width), int(lms[torso_left[0][0]].y*height)]
-                            pixel_torso_left_e = [int(lms[torso_left[0][1]].x*width), int(lms[torso_left[0][1]].y*height)]
+                            pixel_ll1_s = [int(lms[left_leg[0][0]].x*display_width), int(lms[left_leg[0][0]].y*display_height)]
+                            pixel_ll1_e = [int(lms[left_leg[0][1]].x*display_width), int(lms[left_leg[0][1]].y*display_height)]
+                            pixel_ll2_s = [int(lms[left_leg[1][0]].x*display_width), int(lms[left_leg[1][0]].y*display_height)]
+                            pixel_ll2_e = [int(lms[left_leg[1][1]].x*display_width), int(lms[left_leg[1][1]].y*display_height)]
+                            pixel_ll3_s = [int(lms[left_leg[2][0]].x*display_width), int(lms[left_leg[2][0]].y*display_height)]
+                            pixel_ll3_e = [int(lms[left_leg[2][1]].x*display_width), int(lms[left_leg[2][1]].y*display_height)]
+                            pixel_ll4_s = [int(lms[left_leg[3][0]].x*display_width), int(lms[left_leg[3][0]].y*display_height)]
+                            pixel_ll4_e = [int(lms[left_leg[3][1]].x*display_width), int(lms[left_leg[3][1]].y*display_height)]
+                            pixel_ll5_s = [int(lms[left_leg[4][0]].x*display_width), int(lms[left_leg[4][0]].y*display_height)]
+                            pixel_ll5_e = [int(lms[left_leg[4][1]].x*display_width), int(lms[left_leg[4][1]].y*display_height)]
+                            pixel_torso_left_s = [int(lms[torso_left[0][0]].x*display_width), int(lms[torso_left[0][0]].y*display_height)]
+                            pixel_torso_left_e = [int(lms[torso_left[0][1]].x*display_width), int(lms[torso_left[0][1]].y*display_height)]
                             cv2.line(vis_frame, pixel_ll1_s, pixel_ll1_e, (150, 150, 150), 2)
                             cv2.line(vis_frame, pixel_ll2_s, pixel_ll2_e, (150, 150, 150), 2)
                             cv2.line(vis_frame, pixel_ll3_s, pixel_ll3_e, (150, 150, 150), 2)
@@ -324,8 +326,8 @@ Methods: read(), isOpened(), release(), get()"""
                         }
                         for joint, idx in lm_indices.items():
                             lm = lms[idx]
-                            px = int(lm.x * width)
-                            py = int(lm.y * height)
+                            px = int(lm.x * display_width)
+                            py = int(lm.y * display_height)
                             color = GREEN if valid else RED
                             cv2.circle(vis_frame, (px, py), 8, color, -1)
                             text= f"x:{lm.x:.2f} y:{lm.y:.2f}"
@@ -353,11 +355,11 @@ Methods: read(), isOpened(), release(), get()"""
                         hip_angle = _angle_3pt(sho_arr, hip_arr, knee_arr)
                         ankle_angle = _angle_3pt(knee_arr, ank_arr, foot_arr)
 
-                        cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, height-70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
-                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}", (20, height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+                        cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, display_height-70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
+                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}", (20, display_height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
 
                         if paused:
-                            cv2.putText(vis_frame, "Paused", (width//2 - 60, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, WHITE, 2)
+                            cv2.putText(vis_frame, "Paused", (display_width//2 - 60, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, WHITE, 2)
                         cv2.imshow("Extraction Visualizer", vis_frame) #cv2.imshow(window_name, image) this command basically shows a pop up window where an image or video is displayed 
                     
                     
