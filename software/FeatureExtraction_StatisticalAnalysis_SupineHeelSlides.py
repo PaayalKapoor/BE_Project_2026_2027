@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = "videos/Supine_Heel_Slides/Yash_SHS_R.mp4"  #Path to the input video that needs to be analyzed
+VIDEO_PATH = "videos/Supine_Heel_Slides/Patient_118_SHS_R.mp4"  #Path to the input video that needs to be analyzed
 OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Yash_SHS_R" #Unique patient ID
+PATIENT_ID = "Patient_118_SHS_R" #Unique patient ID
 SIDE = "right"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -74,8 +74,8 @@ Therefore, 100 - 112 degree is classified as S3. Everything between 112 - 168 is
 STATE_BOUNDARY_FRAC = 0.15
 
 SIDE_LANDMARK_INDICES = {
-    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32),
-    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31),
+    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32, heel=30),
+    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31, heel=29),
 }
 
 print("SIDE_LANDMARKS set up successfully")
@@ -106,7 +106,7 @@ def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160,
         deviation = np.sqrt((out[x_col]-med_x)**2 + (out[y_col]-med_y)**2) #Deviation from the median is calculated 
         consistent = deviation <= deviation_threshold #Here we check, if the deviation is less than the given threshold 
 
-        near_ext_mask = near_extension if joint in ("knee","ankle", "foot") else np.zeros(len(out), dtype=bool) #The three joints that jitter a lot during extension is knee, ankle and foot. 
+        near_ext_mask = near_extension if joint in ("knee","ankle", "foot", "heel") else np.zeros(len(out), dtype=bool) #The three joints that jitter a lot during extension is knee, ankle and foot. 
         rescued = low_conf & near_ext_mask & consistent #The frame will be rescued only if it has a low visibility score, is near extension and stable (not jittery)
         reject = low_conf & ~rescued #else the frame is rejected
 
@@ -120,21 +120,38 @@ def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160,
     coord_cols = [c for c in out.columns if c.endswith("_x") or c.endswith("_y")] #Here we interpolate the rejected frames only for signal continuity 
     out[coord_cols] = out[coord_cols].interpolate(method="linear", limit_direction="both")
 
-    #Effective detection rate which is calculated after gating is performed. 
-    key_joint = "knee"   # use knee as the representative joint
-    valid_after_gating = out[f"{key_joint}_x"].notna().sum()
-    total_frames = len(out)
-    effective_rate = valid_after_gating / total_frames * 100
-
-    print(f"\n Effective detection rate after gating: "
-          f"{valid_after_gating}/{total_frames} frames ({effective_rate:.1f}%)")
-
-    if effective_rate < 70:
-        print("WARNING: less than 70% of frames usable after gating — "
-              "check clothing / occlusion / lighting")
 
     return out
 
+def print_video_statistics(angle_df: pd.DataFrame):
+    """
+    Print how many frames are actually usable for each feature
+    after visibility gating.
+    """
+
+    total_frames = len(angle_df)
+
+    print("\nVideo statistics")
+    print("-" * 30)
+    print(f"Total frames: {total_frames}\n")
+
+    feature_names = {
+        "knee_angle": "Knee angle",
+        "hip_angle": "Hip angle",
+        "ankle_angle": "Ankle angle",
+        "pelvic_gap": "Pelvic gap",
+        "heel_y": "Heel lift"
+    }
+
+    for feature, vis_cols in VIS_COLS.items():
+
+        valid = _visible(angle_df, vis_cols)
+
+        usable = int(valid.sum())
+        percent = 100 * usable / total_frames
+
+        print(f"{feature_names[feature]:<20}: "
+              f"{usable}/{total_frames} ({percent:.1f}%)")
 
 def smooth_landmarks(lm_df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -189,7 +206,7 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
     pipeline is completely unaffected.
     """
     lm_indices = SIDE_LANDMARK_INDICES[side] #Indces for a particular side as defined above are extracted and saved in this variable
-    records    = [] #Created to store the pose coordinates
+    records = [] #Created to store the pose coordinates
 
     #The pose estimation model is loaded
     #An object basically contains information (data/attributes) and methods or functions that are used to operate on that data
@@ -264,7 +281,7 @@ Methods: read(), isOpened(), release(), get()"""
                 row = {"frame": frame_idx, "detected": False} #Stores information about the current frame
 
                 #result.pose_landmarks is a list of poses; [0] = first (only) person. lm is a mediapipe landmark object that contains: x coordinate, y coordinate, z coordinate, visibility and presence.
-                """lm_indices = { "shoulder":11, "hip":23, "knee":25, "ankle":27, "foot":3 } .items() gives: ("shoulder",11), ("hip",23), ("knee",25), ("ankle",27), ("foot",31) """
+                """lm_indices = { "shoulder":11, "hip":23, "knee":25, "ankle":27, "foot":29, "heel":31 } .items() gives: ("shoulder",11), ("hip",23), ("knee",25), ("ankle",27), ("foot",31) """
                 if result.pose_landmarks and len(result.pose_landmarks) > 0:
                     lms = result.pose_landmarks[0]          #list of NormalizedLandmark
                     valid = is_valid_leg(lms, lm_indices, side)
@@ -322,7 +339,8 @@ Methods: read(), isOpened(), release(), get()"""
                             "hip" : "HIP",
                             "knee" : "KNEE",
                             "ankle" : "ANK", 
-                            "foot" : "FOOT"
+                            "foot" : "FOOT", 
+                            "heel": "HEEL"
                         }
                         for joint, idx in lm_indices.items():
                             lm = lms[idx]
@@ -344,19 +362,20 @@ Methods: read(), isOpened(), release(), get()"""
                         ank_lm = lms[lm_indices["ankle"]]
                         sho_lm = lms[lm_indices["shoulder"]]
                         foot_lm = lms[lm_indices["foot"]]
+                        heel_lm = lms[lm_indices["heel"]]
 
                         hip_arr = np.array([hip_lm.x, hip_lm.y])
                         knee_arr = np.array([knee_lm.x, knee_lm.y])
                         ank_arr = np.array([ank_lm.x, ank_lm.y])
                         sho_arr = np.array([sho_lm.x, sho_lm.y])
                         foot_arr = np.array([foot_lm.x, foot_lm.y])
-
+                        
                         knee_angle = _angle_3pt(hip_arr, knee_arr, ank_arr)
                         hip_angle = _angle_3pt(sho_arr, hip_arr, knee_arr)
                         ankle_angle = _angle_3pt(knee_arr, ank_arr, foot_arr)
 
                         cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, display_height-70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
-                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}", (20, display_height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
+                        cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}" f"Heel - {heel_lm.visibility: .2f}", (20, display_height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
 
                         if paused:
                             cv2.putText(vis_frame, "Paused", (display_width//2 - 60, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, WHITE, 2)
@@ -443,22 +462,28 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
     for frame_idx, r in lm_df.iterrows(): #It saves the coordinates and loops through each row of data. lm_df is a pandas dataframe and iterrows() returns the index and data in a particular row.
     #frame_idx stores the index of the row and r stores the data in the row
         shoulder = np.array([r["shoulder_x"], r["shoulder_y"]]) #Extract the shoulder coordinates from each row of data
-        hip      = np.array([r["hip_x"],      r["hip_y"]])
-        knee     = np.array([r["knee_x"],     r["knee_y"]])
-        ankle    = np.array([r["ankle_x"],    r["ankle_y"]])
-        foot     = np.array([r["foot_x"],     r["foot_y"]])
+        hip = np.array([r["hip_x"], r["hip_y"]])
+        knee = np.array([r["knee_x"], r["knee_y"]])
+        ankle = np.array([r["ankle_x"], r["ankle_y"]])
+        foot = np.array([r["foot_x"], r["foot_y"]])
+        heel = np.array([r["heel_x"], r["heel_y"]])
 
-
+        torso_length = np.linalg.norm(hip-shoulder) + 1e-8
+        
         rows.append({
-            "frame":       frame_idx, #The functions are called and the data is added to the rows
-            "knee_angle":  _angle_3pt(hip, knee, ankle),
-            "hip_angle":   _angle_3pt(shoulder, hip, knee),
+            "frame": frame_idx, #The functions are called and the data is added to the rows
+            "knee_angle": _angle_3pt(hip, knee, ankle),
+            "hip_angle": _angle_3pt(shoulder, hip, knee),
             "ankle_angle": _angle_3pt(knee, ankle, foot),
-            "pelvic_gap":  _pelvic_lift(hip, shoulder),
-            "hip_vis":      r["hip_vis"],
-            "knee_vis":     r["knee_vis_effective"],
-            "ankle_vis":    r["ankle_vis_effective"],
+            "pelvic_gap": _pelvic_lift(hip, shoulder),
+            "hip_vis": r["hip_vis"],
+            "knee_vis": r["knee_vis_effective"],
+            "ankle_vis": r["ankle_vis_effective"],
             "shoulder_vis": r["shoulder_vis"],
+            "heel_y": heel[1],
+            "torso_length": torso_length,
+            "heel_vis": r["heel_vis_effective"],
+            "foot_vis":r["foot_vis_effective"]
         })
 
     return pd.DataFrame(rows).set_index("frame") #Set the frame as the index of the row
@@ -468,7 +493,7 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
 #This function takes the raw angles that were calculated and smooths them using the savitzky golay filter
 def smooth_angles(angle_df: pd.DataFrame) -> pd.DataFrame:
     out = angle_df.copy()
-    for col in ["knee_angle", "hip_angle", "ankle_angle", "pelvic_gap"]:
+    for col in ["knee_angle", "hip_angle", "ankle_angle", "pelvic_gap", "heel_y"]:
         out[col] = savgol_filter(angle_df[col].values, SMOOTH_WINDOW, SMOOTH_POLY)
     return out
 
@@ -585,15 +610,16 @@ def assign_states(
 
 """Feature Extraction"""
 
-ANGLE_COLS   = ["knee_angle", "hip_angle", "ankle_angle",  "pelvic_gap"] #An array is defined that stores the 4 main angles
-ANGLE_LABELS = ["knee", "hip", "ankle", "pelvic"] #Stores the labels
+ANGLE_COLS   = ["knee_angle", "hip_angle", "ankle_angle",  "pelvic_gap", "heel_y"] #An array is defined that stores the 4 main angles
+ANGLE_LABELS = ["knee", "hip", "ankle", "pelvic", "heel"] #Stores the labels
 N_STATES     = 4 #The number of states per repetition
 VIS_THRESHOLD = 0.5
 VIS_COLS = {
-    "knee_angle":  "knee_vis",
-    "hip_angle":   "hip_vis",
-    "ankle_angle": "ankle_vis",
-    "pelvic_gap":  "pelvic_vis",        
+    "knee_angle": ["hip_vis", "knee_vis", "ankle_vis"],
+    "hip_angle": ["shoulder_vis", "hip_vis", "knee_vis"],
+    "ankle_angle": ["knee_vis", "ankle_vis", "foot_vis"],
+    "pelvic_gap":  ["hip_vis", "shoulder_vis"], 
+    "heel_y": ["heel_vis"]       
 } #A visibility threshold is added to ensure that only frames that have a visibility above the given thresholds for the key joints required would be considered and the frames with lower
 #visibility will be rejected.
 
@@ -605,6 +631,17 @@ STAT_FUNCS = {
     "std":   np.std,
 } #The features that need to be calculated per state of a rep
 
+def _visible(df, vis_cols, threshold=VIS_THRESHOLD):
+    """
+    Row-wise mask: True only where EVERY listed visibility column is
+    >= threshold for that row. A feature computed from multiple landmarks
+    (e.g. knee_angle needs hip, knee AND ankle) is only kept when all of
+    them cleared the threshold, not just the one sharing its name.
+    """
+    cols = [c for c in vis_cols if c in df.columns]
+    if not cols:
+        return pd.Series(True, index=df.index)
+    return (df[cols] >= threshold).all(axis=1)
 
 def compute_rep_features(
     angle_df: pd.DataFrame,
@@ -626,9 +663,7 @@ def compute_rep_features(
     #Extract the frames belonging to this rep
     rep_angle_df = angle_df.loc[start:end]
     rep_angle_df = rep_angle_df.copy()
-    rep_angle_df["pelvic_vis"] = np.minimum(
-        rep_angle_df["hip_vis"], rep_angle_df["shoulder_vis"]
-    )
+    rep_angle_df["state"] = states
 
     row = {
         "patient_id":   patient_id,
@@ -640,20 +675,17 @@ def compute_rep_features(
     }
 
     for s in range(1, N_STATES + 1):
-        mask         = (states == s) #for eg: if states == 1, [1, 1, 2, 2, 2, 3, 3, 4, 4] then [True, True, False, False, False, False, False, False, False]
+        mask = (states == s) #for eg: if states == 1, [1, 1, 2, 2, 2, 3, 3, 4, 4] then [True, True, False, False, False, False, False, False, False]
         state_frames = rep_angle_df[mask] #Stores the frames belonging to a particular state
 
         row[f"S{s}_duration"] = int(mask.sum()) #Stores the summation of those frame. Basically stores how many frames did a particular state last
 
         for col, label in zip(ANGLE_COLS, ANGLE_LABELS): #zip() pairs values together ("knee_angle", "knee"), ("hip_angle", "hip"), etc.
-            vis_col = VIS_COLS.get(col)
-            if vis_col is not None and vis_col in state_frames.columns:
-                vis_mask = state_frames[vis_col] >= VIS_THRESHOLD
-                gated_frames = state_frames[vis_mask]
+            vis_mask = _visible(state_frames, VIS_COLS.get(col, []))
+            gated_frames = state_frames[vis_mask]
                 # Track how many frames were kept vs total
-                row[f"S{s}_{label}_vis_frames"] = int(vis_mask.sum())
-            else:
-                gated_frames = state_frames
+            row[f"S{s}_{label}_vis_frames"] = int(vis_mask.sum())
+          
 
             # Use gated frames for stats, fall back to NaN if all frames dropped
             vals = (
@@ -670,6 +702,18 @@ def compute_rep_features(
     row["pelvic_lift_max"] = row["S1_pelvic_mean"] - np.nanmin([
         row["S2_pelvic_min"], row["S3_pelvic_min"], row["S4_pelvic_min"]
     ])
+    #df.loc[row_indexer, column_indexer]
+    valid = _visible(rep_angle_df, ["heel_vis", "hip_vis", "shoulder_vis"])
+
+    baseline = rep_angle_df.loc[(rep_angle_df["state"] == 1) & valid, "heel_y"].median()
+
+    if np.isnan(baseline):
+        baseline = rep_angle_df.loc[ valid, "heel_y"].iloc[:10].median()
+
+    heel_lift = (baseline - rep_angle_df.loc[valid, "heel_y"]) / rep_angle_df.loc[valid, "torso_length"]
+
+    row["heel_lift_max"] = heel_lift.max()
+    row["heel_lift_mean"] = heel_lift.mean()
     row["knee_rom"] = row["S1_knee_mean"] - row["S3_knee_min"]
     row["hip_compensation"] = row["S3_hip_mean"] - row["S1_hip_mean"]
     row["S2_S4_speed_ratio"] = row["S2_duration"]/(row["S4_duration"]+1e-8) #This feature ensures that the speed of ascent and descent is not abnormal and uncontrolled with respect to each other
@@ -683,7 +727,7 @@ def compute_rep_features(
 def process_video(
     video_path: str,
     patient_id: str,
-    side: str       = "right", #The default side is set to right
+    side: str = "right", #The default side is set to right
     output_csv: str = None,
 ) -> pd.DataFrame:
     """
@@ -710,6 +754,8 @@ def process_video(
     #2. Angles. Here we actually calculate the angles using raw joint coordinates.
     print("[4/7] Calculating joint angles")
     angle_df = calculate_angles(lm_df_smooth)
+
+    print_video_statistics(angle_df)
 
     #3. Smooth. Here smoothing of the angles is performed using the savitzky golay filter
     print("[5/7] Smoothing")
