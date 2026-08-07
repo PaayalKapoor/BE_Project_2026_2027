@@ -40,10 +40,10 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = "videos/Supine_Heel_Slides/Patient_118_SHS_R.mp4"  #Path to the input video that needs to be analyzed
+VIDEO_PATH = "videos/Supine_Heel_Slides/Gauri_SHS_L_1.mp4"  #Path to the input video that needs to be analyzed
 OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Patient_118_SHS_R" #Unique patient ID
-SIDE = "right"   #The leg that faces the camera
+PATIENT_ID = "Gauri" #Unique patient ID
+SIDE = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -589,8 +589,8 @@ def assign_states(
     S3_EXIT = 10
     thresh_high = rep_max - S1_EXIT
     thresh_low = rep_min + S3_EXIT
-    #thresh_high  = rep_max - STATE_BOUNDARY_FRAC * rep_range   #S1 boundary - maximum extension
-    #thresh_low   = rep_min + STATE_BOUNDARY_FRAC * rep_range   #S3 boundary - maximum flexion
+    #thresh_high = rep_max - STATE_BOUNDARY_FRAC * rep_range   #S1 boundary - maximum extension
+    #thresh_low  = rep_min + STATE_BOUNDARY_FRAC * rep_range   #S3 boundary - maximum flexion
     valley_local = valley - start                              #index within slice. Find the valley within the rep so that we can distinguish whether the patient is moving into flexion or moving back to extension
 
     n      = len(rep_angles)
