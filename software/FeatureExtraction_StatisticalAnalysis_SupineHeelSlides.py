@@ -40,8 +40,8 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = "videos/Supine_Heel_Slides/Gauri_SHS_L_1.mp4"  #Path to the input video that needs to be analyzed
-OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
+VIDEO_PATH = r"D:\Sayalee\Major_project\Dataset_Videos\Supine_Heel_Slides\Gauri_SHS_L_1.mp4"  #Path to the input video that needs to be analyzed
+OUTPUT_CSV = r"docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
 PATIENT_ID = "Gauri" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
 
