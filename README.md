@@ -4,6 +4,9 @@
 Fitonexa - The Smart Fitness Expert
 ---
 
+## Project Proposal Video
+[![Fitonexa-Proposal_Video](https://img.youtube.com/vi/cta8rCHdUBc/maxresdefault.jpg)](https://www.youtube.com/watch?v=cta8rCHdUBc)
+
 ## Team Details
 
 | Sr. No. | Name of Student | Roll No. | Branch | Email ID |
