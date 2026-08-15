@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = "videos/Supine_Heel_Slides/Gauri_SHS_L_1.mp4"  #Path to the input video that needs to be analyzed
-OUTPUT_CSV = "docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Gauri" #Unique patient ID
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L_1.mp4" #Path to the input video that needs to be analyzed
+OUTPUT_CSV = r"docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
+PATIENT_ID = "Gauri_L" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -643,11 +643,36 @@ def _visible(df, vis_cols, threshold=VIS_THRESHOLD):
         return pd.Series(True, index=df.index)
     return (df[cols] >= threshold).all(axis=1)
 
+def compute_video_baseline(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict) -> float:
+    """
+    Pool S1 (extended-state) heel_y frames across ALL reps in the video
+    to get one stable baseline, rather than recomputing it per rep from
+    a small handful of frames each time.
+    """
+    s1_heel_values = []
+
+    for rep in reps:
+        start, end = rep["start_frame"], rep["end_frame"]
+        states = states_by_rep[rep["rep_id"]]
+        rep_df = smooth_df.loc[start:end].copy()
+        rep_df["state"] = states
+
+        valid = _visible(rep_df, ["heel_vis"])
+        s1_mask = (rep_df["state"] == 1) & valid
+        s1_heel_values.extend(rep_df.loc[s1_mask, "heel_y"].values)
+
+    if len(s1_heel_values) == 0:
+        #fallback: no clean S1 frames anywhere in the video
+        return np.nan
+
+    return float(np.median(s1_heel_values))
+
 def compute_rep_features(
     angle_df: pd.DataFrame,
     rep: dict,
     states: np.ndarray,
     patient_id: str,
+    baseline: float,
 ) -> dict:
     """
     Compute per-state stats for a single rep.
@@ -698,25 +723,36 @@ def compute_rep_features(
                 row[f"S{s}_{label}_{stat_name}"] = (
                     float(stat_fn(vals)) if len(vals) > 0 else np.nan
                 )
-    
+    for s in range(1, N_STATES + 1):
+        mask = (states == s)
+        state_frames = rep_angle_df[mask]
+        vis_mask = _visible(state_frames, VIS_COLS.get("heel_y", []))
+        gated_heel = state_frames.loc[vis_mask, "heel_y"]
+
+        if len(gated_heel) == 0 or np.isnan(baseline):
+            row[f"S{s}_heel_range"] = np.nan
+        else:
+            row[f"S{s}_heel_range"] = float(max(0.0, baseline - gated_heel.min()))
     row["pelvic_lift_max"] = row["S1_pelvic_mean"] - np.nanmin([
         row["S2_pelvic_min"], row["S3_pelvic_min"], row["S4_pelvic_min"]
     ])
     #df.loc[row_indexer, column_indexer]
-    valid = _visible(rep_angle_df, ["heel_vis", "hip_vis", "shoulder_vis"])
+    valid = _visible(rep_angle_df, ["heel_vis"])
+    valid_heel = rep_angle_df.loc[valid, "heel_y"]
 
-    baseline = rep_angle_df.loc[(rep_angle_df["state"] == 1) & valid, "heel_y"].median()
+    if len(valid_heel) == 0 or np.isnan(baseline):
+        row["heel_lift_max"] = np.nan
+        row["heel_lift_mean"] = np.nan
+    else:
+        # No torso-length division: raw pixel-space lift, using the
+        # video-level baseline computed once, not per rep.
+        heel_lift = (baseline - valid_heel).clip(lower=0)
+        row["heel_lift_max"] = float(heel_lift.max())
+        row["heel_lift_mean"] = float(heel_lift.mean())
 
-    if np.isnan(baseline):
-        baseline = rep_angle_df.loc[ valid, "heel_y"].iloc[:10].median()
-
-    heel_lift = (baseline - rep_angle_df.loc[valid, "heel_y"]) / rep_angle_df.loc[valid, "torso_length"]
-
-    row["heel_lift_max"] = heel_lift.max()
-    row["heel_lift_mean"] = heel_lift.mean()
     row["knee_rom"] = row["S1_knee_mean"] - row["S3_knee_min"]
     row["hip_compensation"] = row["S3_hip_mean"] - row["S1_hip_mean"]
-    row["S2_S4_speed_ratio"] = row["S2_duration"]/(row["S4_duration"]+1e-8) #This feature ensures that the speed of ascent and descent is not abnormal and uncontrolled with respect to each other
+    row["S2_S4_speed_ratio"] = row["S2_duration"] / (row["S4_duration"] + 1e-8)
 
     return row
 """Main Pipeline"""
@@ -770,8 +806,16 @@ def process_video(
     if not reps: #If no rep detected, return empty data frame
         return pd.DataFrame()
 
-    # 5. States + features
+    #5. States + features
     print("[7/7] Segmenting states & computing features")
+    #First pass: compute states for every rep (needed before we can pool S1 frames)
+    states_by_rep = {}
+    for rep in reps:
+        states_by_rep[rep["rep_id"]] = assign_states(knee, rep["start_frame"], rep["valley_frame"], rep["end_frame"])
+
+    #video-level baseline
+    video_baseline = compute_video_baseline(smooth_df, reps, states_by_rep)
+    print(f"Video-level heel baseline: {video_baseline:.4f} (from pooled S1 frames)")
     all_rows = [] #Stores the final result
 
     for rep in reps: #Loops through all reps in reps
@@ -780,7 +824,7 @@ def process_video(
         valley = rep["valley_frame"]
 
         states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
-        row    = compute_rep_features(smooth_df, rep, states, patient_id) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
+        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
