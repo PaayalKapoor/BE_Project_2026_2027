@@ -11,10 +11,10 @@ Fitonexa - The Smart Fitness Expert
 
 | Sr. No. | Name of Student | Roll No. | Branch | Email ID |
 |---|---|---|---|---|
-| 1 | Paayal Kapoor | 44 | AURO | 2023.paayal.kapoor@ves.ac.in |
-| 2 | Yash Patil | 53 | AURO | 2023.yash.patil@ves.ac.in |
-| 3 | Sayalee Mahagaonkar | 48 | AURO | 2023.sayalee.mahagaonkar@ves.ac.in |
-| 4 | Gauri Jaitapkar | 40 | AURO | 2023.gauri.jaitapkar@ves.ac.in |
+| 1 | Paayal Kapoor | 07 | AURO | 2023.paayal.kapoor@ves.ac.in |
+| 2 | Yash Patil | 21 | AURO | 2023.yash.patil@ves.ac.in |
+| 3 | Sayalee Mahagaonkar | 56 | AURO | 2023.sayalee.mahagaonkar@ves.ac.in |
+| 4 | Gauri Jaitapkar | 47 | AURO | 2023.gauri.jaitapkar@ves.ac.in |
 
 ---
 
@@ -150,14 +150,22 @@ Document system architecture, implementation methodology, experimental results, 
 ---
 
 ## Project Timeline
-
-![Project Timeline](images/Project_Timeline.png)
+| Week | Task Planned | Status |
+|---|---|---|
+| **1. Supine Heel Slides – Model V1** | Train the first ML model using the finalized supine heel-slide dataset | **16 August 2026** |
+| **2. Model Improvement & Validation** | Evaluate performance and iteratively improve the model using feature engineering, PCA and other optimization techniques | **August–September 2026** |
+| **3. Continued Data Collection** | Expand the patient dataset and pursue hospital collaborations for larger and more diverse clinical data | **Ongoing** |
+| **4. Shoulder Flexion Model** | Develop and train the model for shoulder flexion; target **≥75–80% accuracy** | **Mid-October 2026** |
+| **5. Gym Exercise Dataset** | Shortlist and begin data collection for **2–3 gym-based exercises** | **September–October 2026** |
+| **6. Edge Deployment** | Deploy the trained model and processing pipeline on **Jetson Orin**, subject to hardware availability | **1st Week of November 2026** |
 
 ---
 
 ## Weekly Progress Updates
-
-![Weekly Progress](images/Weekly_Progress.png) 
+| Week | Date | Work Completed | Work Planned for Next Week | Issues / Challenges | Github Commit Link |
+|---|---|---|---|---|---|
+| **Week 1** | **03/08/26 – 09/08/26** | • Dataset labelling and validation<br>• Added S2/S4 duration features for velocity detection<br>• Started processing RealSense `.db3` data<br>• Jetson Nano setup with OpenCV & MediaPipe<br>• Continued patient data collection | • Resolve contradictory heel-lift features<br>• Improve heel-lift detection<br>• Prepare dataset for ML training | • Landmark jitter and low visibility<br>• Contradictory heel-lift values | **[View Commit](https://github.com/PaayalKapoor/BE_Project_2026_2027/commit/f693c846badc1ecb4ae3e08d7e8719a98a638617#diff-a90ef417cae581793383f154a9dfa72162299f470c75ab8972c8f5a20bdbde23)**  |
+| **Week 2** | **10/08/26 – 15/08/26** | • Tested multiple heel-lift detection approaches<br>• Trained first Random Forest model: **82% accuracy**<br>• Identified torso normalization as source of contradictions<br>• Revised heel-lift baseline/range calculations<br>• Regenerated dataset | • Improve model performance<br>• Collect missing patient height data<br>• Start shoulder flexion dataset generation | • Low precision/recall (~43%)<br>• Dataset imbalance and limited data<br>• Contradictory heel-lift features | **[View Commit](https://github.com/PaayalKapoor/BE_Project_2026_2027/commit/01a79ddbb0735e16fe7e482d4701b6cc2a8932ea)** |
 
 ---
 

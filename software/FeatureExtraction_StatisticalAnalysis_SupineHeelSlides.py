@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L_1.mp4" #Path to the input video that needs to be analyzed
-OUTPUT_CSV = r"docs/supine_heel_slides_data.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Gauri_L" #Unique patient ID
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Patient_124_SHS_L.mp4" #Path to the input video that needs to be analyzed
+OUTPUT_CSV = r"docs/supine_heel_slides_baseline.csv" #The output file that will be created to store the extracted features
+PATIENT_ID = "Patient_124_SHS_L" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -373,7 +373,7 @@ Methods: read(), isOpened(), release(), get()"""
                         knee_angle = _angle_3pt(hip_arr, knee_arr, ank_arr)
                         hip_angle = _angle_3pt(sho_arr, hip_arr, knee_arr)
                         ankle_angle = _angle_3pt(knee_arr, ank_arr, foot_arr)
-
+                        cv2.putText(vis_frame, f"Frame: {frame_idx}", (400, 100), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0), 1)
                         cv2.putText(vis_frame, f"Knee: {knee_angle: .1f}  Hip: {hip_angle: .1f}  Ankle: {ankle_angle: .1f}", (20, display_height-70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
                         cv2.putText(vis_frame, f"Visibility: Knee - {knee_lm.visibility: .2f} " f"Hip - {hip_lm.visibility: .2f} " f"Ankle - {ank_lm.visibility: .2f} " f"Shoulder - {sho_lm.visibility: .2f} " f"Foot - {foot_lm.visibility: .2f}" f"Heel - {heel_lm.visibility: .2f}", (20, display_height-40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
 
