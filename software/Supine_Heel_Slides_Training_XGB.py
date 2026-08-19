@@ -5,7 +5,8 @@ from sklearn.metrics import accuracy_score, precision_score, f1_score, recall_sc
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GroupShuffleSplit
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.multioutput import MultiOutputClassifier
 import xgboost as xgb
 #Unweighted
 
@@ -24,11 +25,13 @@ X = df.drop(columns = labels + drop + metadata).values
 y = df[labels].values
 groups = df['patient_id'].values
 
-gkf = GroupKFold(n_splits=5)
+sgkf = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state = 42)
 fold_metrics = []
 fold_reports = []
 
-for fold, (train_index, test_index) in enumerate(gkf.split(X, y, groups=groups), start=1):
+strat_key = y[:, 0] * 1 + y[:, 1] * 2
+
+for fold, (train_index, test_index) in enumerate(sgkf.split(X, strat_key, groups=groups), start=1):
     X_train, X_test = X[train_index], X[test_index]
     y_train, y_test = y[train_index], y[test_index]
 
@@ -57,9 +60,30 @@ for fold, (train_index, test_index) in enumerate(gkf.split(X, y, groups=groups),
 #Standardize the testing data on the fitted scaler 
     X_test = scaler.transform(X_test)
 
-    xgb_model = xgb.XGBClassifier(random_state=42)
-    xgb_model.fit(X_train, y_train)
-    y_pred_xgb = xgb_model.predict(X_test)
+    pos_weights = []
+    for i in range(y_train.shape[1]):
+        pos = y_train[:, i].sum()
+        neg = len(y_train) - pos
+        pos_weights.append(neg / max(pos, 1))  #To avoid divison by zero
+
+    #One XGBClassifier per label, each with its own weight
+    base_estimators = [
+        xgb.XGBClassifier(random_state=42, scale_pos_weight=w)
+        for w in pos_weights
+    ]
+
+    #MultiOutputClassifier expects one estimator, so fit manually per column
+    y_pred_xgb = np.zeros_like(y_test)
+    fitted_models = []
+    for i, est in enumerate(base_estimators):
+        est.fit(X_train, y_train[:, i])
+        y_pred_xgb[:, i] = est.predict(X_test)
+        fitted_models.append(est)
+
+
+    # xgb_model = xgb.XGBClassifier(random_state=42)
+    # xgb_model.fit(X_train, y_train)
+    # y_pred_xgb = xgb_model.predict(X_test)
 
     accuracy = accuracy_score(y_test, y_pred_xgb)
     precision = precision_score(y_test, y_pred_xgb, average="weighted", zero_division=0)
