@@ -40,10 +40,11 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Patient_123_SHS_L.mp4" #Path to the input video that needs to be analyzed
-OUTPUT_CSV = r"docs/supine_heel_slides_baseline.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Patient_123_SHS_L" #Unique patient ID
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L_1.mp4" #Path to the input video that needs to be analyzed
+OUTPUT_CSV = r"docs/supine_heel_slides_pixelsnormalized.csv" #The output file that will be created to store the extracted features
+PATIENT_ID = "Gauri_SHS_L_1" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
+PATIENT_HEIGHT_CM = 156
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -58,7 +59,7 @@ SMOOTH_POLY = 3 #Fit a cubic polynomial through those 11 points. It uses somethi
 #Rep detection
 REP_MIN_PROMINENCE = 15 #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
 REP_MIN_DISTANCE = 20 #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
-
+NOSE_TO_VERTEX_CM = 11.0
 #Used to divide each rep into states. The code determines these states based on the knee angle range of a repetition.
 """ How it works - Suppose one rep has max angle = 180 (fully extended)
 and min angle = 100 (knee bent)
@@ -74,11 +75,50 @@ Therefore, 100 - 112 degree is classified as S3. Everything between 112 - 168 is
 STATE_BOUNDARY_FRAC = 0.15
 
 SIDE_LANDMARK_INDICES = {
-    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32, heel=30),
-    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31, heel=29),
+    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32, heel=30, nose=0),
+    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31, heel=29, nose=0),
 }
 
 print("SIDE_LANDMARKS set up successfully")
+
+def compute_pixels_per_cm(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict, 
+                           patient_height_cm: float) -> float:
+    """
+    Calibrate pixels-per-cm from pooled S1 (near-extension) frames, where
+    the body is closest to fully collinear and least affected by knee-flexion
+    foreshortening. Uses nose-to-heel pixel span against corrected standing height.
+    """
+    if patient_height_cm is None or np.isnan(patient_height_cm):
+        return np.nan
+
+    spans = []
+    for rep in reps:
+        start, end = rep["start_frame"], rep["end_frame"]
+        states = states_by_rep[rep["rep_id"]]
+        rep_df = smooth_df.loc[start:end].copy()
+        rep_df["state"] = states
+
+        valid = _visible(rep_df, ["nose_vis", "heel_vis"])
+        s1_mask = (rep_df["state"] == 1) & valid
+        s1_frames = rep_df[s1_mask]
+
+        for _, r in s1_frames.iterrows():
+            nose_xy = np.array([r["nose_x"], r["nose_y"]])
+            heel_xy = np.array([r["heel_x"], r["heel_y"]])
+            spans.append(np.linalg.norm(nose_xy - heel_xy))
+
+    if len(spans) == 0:
+        print("  WARNING: no clean S1 frames for pixels_per_cm calibration")
+        return np.nan
+
+    reference_pixel_span = float(np.median(spans))
+    reference_cm_length = patient_height_cm - NOSE_TO_VERTEX_CM
+    pixels_per_cm = reference_pixel_span / reference_cm_length
+
+    print(f"  pixels_per_cm calibration: {reference_pixel_span:.4f}px / "
+          f"{reference_cm_length:.1f}cm = {pixels_per_cm:.4f} (from {len(spans)} S1 frames)")
+
+    return pixels_per_cm
 
 def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160, deviation_threshold=0.04, window=5):
     #This function takes a data frame (lm_df) which stores the landmark coordinates and visibility scores. Each frame is one row of data.
@@ -340,7 +380,8 @@ Methods: read(), isOpened(), release(), get()"""
                             "knee" : "KNEE",
                             "ankle" : "ANK", 
                             "foot" : "FOOT", 
-                            "heel": "HEEL"
+                            "heel": "HEEL", 
+                            "nose": "NOSE"
                         }
                         for joint, idx in lm_indices.items():
                             lm = lms[idx]
@@ -480,10 +521,14 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
             "knee_vis": r["knee_vis_effective"],
             "ankle_vis": r["ankle_vis_effective"],
             "shoulder_vis": r["shoulder_vis"],
+            "heel_x": heel[0],
             "heel_y": heel[1],
             "torso_length": torso_length,
             "heel_vis": r["heel_vis_effective"],
-            "foot_vis":r["foot_vis_effective"]
+            "foot_vis":r["foot_vis_effective"],
+            "nose_x": r["nose_x"],
+            "nose_y": r["nose_y"],
+            "nose_vis": r["nose_vis"]
         })
 
     return pd.DataFrame(rows).set_index("frame") #Set the frame as the index of the row
@@ -673,6 +718,7 @@ def compute_rep_features(
     states: np.ndarray,
     patient_id: str,
     baseline: float,
+    pixels_per_cm: float=np.nan
 ) -> dict:
     """
     Compute per-state stats for a single rep.
@@ -754,6 +800,18 @@ def compute_rep_features(
     row["hip_compensation"] = row["S3_hip_mean"] - row["S1_hip_mean"]
     row["S2_S4_speed_ratio"] = row["S2_duration"] / (row["S4_duration"] + 1e-8)
 
+    if not np.isnan(pixels_per_cm) and not np.isnan(row["heel_lift_max"]):
+        row["heel_lift_max_cm"] = row["heel_lift_max"] / pixels_per_cm
+        row["heel_lift_mean_cm"] = row["heel_lift_mean"] / pixels_per_cm
+    else:
+        row["heel_lift_max_cm"] = np.nan
+        row["heel_lift_mean_cm"] = np.nan
+
+    if not np.isnan(pixels_per_cm) and not np.isnan(row["pelvic_lift_max"]):
+        row["pelvic_lift_max_cm"] = row["pelvic_lift_max"] / pixels_per_cm
+    else:
+        row["pelvic_lift_max_cm"] = np.nan
+
     return row
 """Main Pipeline"""
 
@@ -809,14 +867,18 @@ def process_video(
     #5. States + features
     print("[7/7] Segmenting states & computing features")
     #First pass: compute states for every rep (needed before we can pool S1 frames)
+    patient_height_cm = PATIENT_HEIGHT_CM
+
     states_by_rep = {}
     for rep in reps:
-        states_by_rep[rep["rep_id"]] = assign_states(knee, rep["start_frame"], rep["valley_frame"], rep["end_frame"])
+        states_by_rep[rep["rep_id"]] = assign_states(
+        knee, rep["start_frame"], rep["valley_frame"], rep["end_frame"]
+    )
 
-    #video-level baseline
     video_baseline = compute_video_baseline(smooth_df, reps, states_by_rep)
-    print(f"Video-level heel baseline: {video_baseline:.4f} (from pooled S1 frames)")
-    all_rows = [] #Stores the final result
+    video_pixels_per_cm = compute_pixels_per_cm(smooth_df, reps, states_by_rep, patient_height_cm)
+
+    all_rows = []
 
     for rep in reps: #Loops through all reps in reps
         start  = rep["start_frame"]  #Extract basic rep features like start frame number, end frame number and valley frame number
@@ -824,7 +886,7 @@ def process_video(
         valley = rep["valley_frame"]
 
         states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
-        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
+        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, video_pixels_per_cm) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
