@@ -40,11 +40,11 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L_1.mp4" #Path to the input video that needs to be analyzed
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Paayal_SHS_R_2.mp4" #Path to the input video that needs to be analyzed
 OUTPUT_CSV = r"docs/supine_heel_slides_pixelsnormalized.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Gauri_SHS_L_1" #Unique patient ID
-SIDE = "left"   #The leg that faces the camera
-PATIENT_HEIGHT_CM = 156
+PATIENT_ID = "Paayal_SHS_R_2" #Unique patient ID
+SIDE = "right"   #The leg that faces the camera
+PATIENT_HEIGHT_CM = 165
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -81,8 +81,7 @@ SIDE_LANDMARK_INDICES = {
 
 print("SIDE_LANDMARKS set up successfully")
 
-def compute_pixels_per_cm(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict, 
-                           patient_height_cm: float) -> float:
+def compute_pixels_per_cm(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict, patient_height_cm: float, frame_width, frame_height) -> float:
     """
     Calibrate pixels-per-cm from pooled S1 (near-extension) frames, where
     the body is closest to fully collinear and least affected by knee-flexion
@@ -99,25 +98,20 @@ def compute_pixels_per_cm(smooth_df: pd.DataFrame, reps: list[dict], states_by_r
         rep_df["state"] = states
 
         valid = _visible(rep_df, ["nose_vis", "heel_vis"])
-        s1_mask = (rep_df["state"] == 1) & valid
-        s1_frames = rep_df[s1_mask]
+        s1_frames = rep_df[(rep_df["state"] == 1) & valid]
 
         for _, r in s1_frames.iterrows():
-            nose_xy = np.array([r["nose_x"], r["nose_y"]])
-            heel_xy = np.array([r["heel_x"], r["heel_y"]])
-            spans.append(np.linalg.norm(nose_xy - heel_xy))
+            dx = (r["nose_x"] - r["heel_x"]) * frame_width
+            dy = (r["nose_y"] - r["heel_y"]) * frame_height
+            spans.append(np.sqrt(dx**2 + dy**2))
 
     if len(spans) == 0:
         print("  WARNING: no clean S1 frames for pixels_per_cm calibration")
         return np.nan
 
-    reference_pixel_span = float(np.median(spans))
+    reference_pixel_span = float(np.median(spans))   # now TRUE pixels
     reference_cm_length = patient_height_cm - NOSE_TO_VERTEX_CM
     pixels_per_cm = reference_pixel_span / reference_cm_length
-
-    print(f"  pixels_per_cm calibration: {reference_pixel_span:.4f}px / "
-          f"{reference_cm_length:.1f}cm = {pixels_per_cm:.4f} (from {len(spans)} S1 frames)")
-
     return pixels_per_cm
 
 def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160, deviation_threshold=0.04, window=5):
@@ -283,6 +277,9 @@ Methods: read(), isOpened(), release(), get()"""
     cap = cv2.VideoCapture(video_path) #VideoCapture() creates an object that lets you read a video file frame by frame
     if not cap.isOpened():
         raise FileNotFoundError(f"Cannot open video: {video_path}")
+
+    frame_width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     #FPS is required since the video mode of mediapipe tasks api requires a time stamp which is achieved by converting frame number into time
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0   #fallback if fps not in metadata
@@ -457,6 +454,8 @@ Methods: read(), isOpened(), release(), get()"""
     cap.release() #After the video ends, we close the file
 
     df = pd.DataFrame(records).set_index("frame") #pandas converts list into a table and the frame number is set as the index
+    df.attrs["frame_width"] = frame_width
+    df.attrs["frame_height"] = frame_height
     
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
     #Change this line in extract_landmarks():
@@ -718,7 +717,8 @@ def compute_rep_features(
     states: np.ndarray,
     patient_id: str,
     baseline: float,
-    pixels_per_cm: float=np.nan
+    pixels_per_cm: float=np.nan,
+    frame_height: float = np.nan
 ) -> dict:
     """
     Compute per-state stats for a single rep.
@@ -801,8 +801,8 @@ def compute_rep_features(
     row["S2_S4_speed_ratio"] = row["S2_duration"] / (row["S4_duration"] + 1e-8)
 
     if not np.isnan(pixels_per_cm) and not np.isnan(row["heel_lift_max"]):
-        row["heel_lift_max_cm"] = row["heel_lift_max"] / pixels_per_cm
-        row["heel_lift_mean_cm"] = row["heel_lift_mean"] / pixels_per_cm
+        row["heel_lift_max_cm"] = (row["heel_lift_max"] * frame_height) / pixels_per_cm
+        row["heel_lift_mean_cm"] = (row["heel_lift_mean"] * frame_height) / pixels_per_cm
     else:
         row["heel_lift_max_cm"] = np.nan
         row["heel_lift_mean_cm"] = np.nan
@@ -822,7 +822,7 @@ def process_video(
     video_path: str,
     patient_id: str,
     side: str = "right", #The default side is set to right
-    output_csv: str = None,
+    output_csv: str = None
 ) -> pd.DataFrame:
     """
     Full pipeline: video → one-row-per-rep feature DataFrame.
@@ -836,6 +836,9 @@ def process_video(
     #extracts joints coordinates (x&y) and stores it in a dataframe - lm_df
     print("\n[1/7] Extracting landmarks")
     lm_df = extract_landmarks(video_path, side, visualize=False)
+
+    frame_width = lm_df.attrs.get("frame_width")
+    frame_height = lm_df.attrs.get("frame_height")
 
     #This step is added since when the leg is being flexed - the foot landmark starts jittering so instead of taking noisy landmarks in the savgol filter which would further disrupt calculations
     #we simply reject those frame where visibility is low. This function then interpolates the nosiy values with the neighboring values instead of using noisy data points. 
@@ -876,7 +879,7 @@ def process_video(
     )
 
     video_baseline = compute_video_baseline(smooth_df, reps, states_by_rep)
-    video_pixels_per_cm = compute_pixels_per_cm(smooth_df, reps, states_by_rep, patient_height_cm)
+    video_pixels_per_cm = compute_pixels_per_cm(smooth_df, reps, states_by_rep, patient_height_cm, frame_width, frame_height)
 
     all_rows = []
 
@@ -886,7 +889,7 @@ def process_video(
         valley = rep["valley_frame"]
 
         states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
-        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, video_pixels_per_cm) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
+        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, video_pixels_per_cm, frame_height) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
