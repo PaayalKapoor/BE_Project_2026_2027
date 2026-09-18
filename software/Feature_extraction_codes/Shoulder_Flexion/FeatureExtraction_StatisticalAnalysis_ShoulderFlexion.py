@@ -338,7 +338,7 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
     #In forward filling the values are filled with a known value before it. This is done for a maximum of 5 consecutive frames.
     #In backward filling the values are filled with a known value after it. Forward fill handles missing middle values and backward fill handles missing beginning values.
     coord_cols = [c for c in df.columns if c.endswith("_x") or c.endswith("_y")]
-    df[coord_cols] = df[coord_cols].ffill(limit=5).bfill(limit=5) 
+    df[coord_cols] = df[coord_cols].interpolate(method="linear", limit_direction="both") 
 
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
     print(f"{frame_idx} frames | detection rate: {detection_rate:.1f}%")
@@ -388,19 +388,33 @@ def signed_angle_calculation_3pt(a, b, c): #We do this so that we can calculate 
     return float(np.degrees(np.arctan2(cross, dot)))
 
 #Trunk lean basically measures how much the torso leans forward
-def _trunk_lean(shoulder_xy, hip_xy):
+def _signed_angle_between_vectors(v1, v2):
     """
-    Angle between the spine vector (hip→shoulder) and vertical.
-    For a perfectly upright patient this is 0°.
-    As the patient leans backward (common compensation in shoulder flexion)
-    this angle increases.
-    In image coordinates y increases downward so vertical is (0, -1).
+    Signed angle from v1 to v2, in degrees. Positive = v1 is rotated
+    counter-clockwise from v2 (in image coordinates); negative = clockwise.
+    Same cross/dot + arctan2 approach as signed_angle_calculation_3pt,
+    just applied to two vectors directly instead of three points.
     """
-    spine    = shoulder_xy - hip_xy          #vector from hip to shoulder
-    vertical = np.array([0.0, -1.0])         #upward direction in image coords
-    denom    = np.linalg.norm(spine) + 1e-8
-    cos_val  = np.dot(spine, vertical) / denom
-    return float(np.degrees(np.arccos(np.clip(cos_val, -1.0, 1.0))))
+    cross = v1[0]*v2[1] - v1[1]*v2[0]
+    dot = np.dot(v1, v2)
+    return float(np.degrees(np.arctan2(cross, dot)))
+
+def _trunk_lean(shoulder_xy, hip_xy, side: str):
+    """
+    Signed angle between the spine vector (hip→shoulder) and vertical.
+    For a perfectly upright patient this is ~0°.
+    Sign convention: positive = backward lean (common compensation in
+    shoulder flexion), negative = forward lean.
+    Sign is flipped for the right side to keep the convention consistent
+    regardless of which way the patient faces the camera — same reasoning
+    as the shoulder_angle sign flip.
+    """
+    spine = shoulder_xy - hip_xy
+    vertical = np.array([0.0, -1.0])
+    angle = _signed_angle_between_vectors(spine, vertical)
+    if side == "right":
+        angle = -1 * angle
+    return angle
 
 def _shoulder_elevation(shoulder_xy, hip_xy):
     """
@@ -424,7 +438,7 @@ def _wrist_above_elbow(wrist_xy, elbow_xy, torso_length):
     #So wrist above elbow means wrist_y < elbow_y
     return float((elbow_xy[1] - wrist_xy[1]) / torso_length)
 
-def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame:
+def calculate_angles(lm_df: pd.DataFrame, side: str) -> pd.DataFrame:
     """
     Calculates five angles for shoulder flexion:
     1. shoulder_angle - hip-shoulder-elbow. Primary tracking angle. Starts near 180° (arm at side), decreases as arm raises.
@@ -442,7 +456,7 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame:
         wrist    = np.array([r["wrist_x"], r["wrist_y"]])
 
         torso_length = np.linalg.norm(shoulder - hip) + 1e-8 #This is calculated so that normalization can be performed 
-        if SIDE=="right":
+        if side=="right":
            shoulder_angle = -1 * (signed_angle_calculation_3pt(hip, shoulder, elbow))
         else:
            shoulder_angle = signed_angle_calculation_3pt(hip, shoulder, elbow)
@@ -451,7 +465,7 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame:
             "frame": frame_idx, #The functions are called and the data is added to the rows
             "shoulder_angle": shoulder_angle,
             "elbow_angle": _angle_3pt(shoulder, elbow, wrist),
-            "trunk_angle": _trunk_lean(shoulder, hip),
+            "trunk_angle": _trunk_lean(shoulder, hip, side),
             "shoulder_height": _shoulder_elevation(shoulder, hip),
             "wrist_elbow_gap": _wrist_above_elbow(wrist, elbow, torso_length),
             "shoulder_vis": r["shoulder_vis"],
@@ -572,13 +586,12 @@ ANGLE_LABELS = ["shoulder",       "elbow",       "trunk",
                 "sho_height",     "wrist_gap"] #Stores the labels
 N_STATES = 4 #States of the exercise 
 VIS_THRESHOLD = 0.5
-
 VIS_COLS = {
-    "shoulder_angle": "shoulder_vis",
-    "elbow_angle": "elbow_vis",
-    "trunk_angle": None,  
-    "shoulder_height": None,
-    "wrist_elbow_gap": "wrist_vis",
+    "shoulder_angle": ["hip_vis", "shoulder_vis", "elbow_vis"],
+    "elbow_angle": ["shoulder_vis", "elbow_vis", "wrist_vis"],
+    "trunk_angle": ["hip_vis", "shoulder_vis"],
+    "shoulder_height": ["hip_vis", "shoulder_vis"],
+    "wrist_elbow_gap": ["elbow_vis", "wrist_vis"],
 } #A visibility threshold is added to ensure that only frames that have a visibility above the given thresholds for the key joints required would be considered and the frames with lower
 #visibility will be rejected.
 
@@ -620,13 +633,15 @@ def compute_rep_features(angle_df, rep, states, patient_id):
         row[f"S{s}_duration"] = int(mask.sum()) #Stores the summation of those frame. Basically stores how many frames did a particular state last
 
         for col, label in zip(ANGLE_COLS, ANGLE_LABELS): #zip() pairs values together ("knee_angle", "knee"), ("hip_angle", "hip"), etc.
-            vis_col = VIS_COLS.get(col)
-            if vis_col is not None and vis_col in state_frames.columns:
-                vis_mask = state_frames[vis_col] >= VIS_THRESHOLD
-                gated_frames = state_frames[vis_mask]
-                row[f"S{s}_{label}_vis_frames"] = int(vis_mask.sum())
+            vis_cols = VIS_COLS.get(col, [])
+            existing_cols = [c for c in vis_cols if c in state_frames.columns]
+            if existing_cols:
+                    vis_mask = (state_frames[existing_cols] >= VIS_THRESHOLD).all(axis=1)
+                    gated_frames = state_frames[vis_mask]
+                    row[f"S{s}_{label}_vis_frames"] = int(vis_mask.sum())
             else:
-                gated_frames = state_frames
+                    gated_frames = state_frames
+                    row[f"S{s}_{label}_vis_frames"] = len(state_frames)
 
             vals = (
                 gated_frames[col].values
@@ -663,7 +678,7 @@ def compute_rep_features(angle_df, rep, states, patient_id):
     row["elbow_deviation_s2"] = abs(
         row["S2_elbow_mean"] - row["S1_elbow_mean"]
     )
-    row["elbow_deviation_s3"] = (
+    row["elbow_deviation_s3"] = abs(
         row["S3_elbow_mean"] - row["S1_elbow_mean"]
     )
 
@@ -700,7 +715,7 @@ def process_video(video_path, patient_id, side="right", output_csv=None):
     lm_df_smooth = smooth_landmarks(lm_df) 
 
     print("[3/6] Calculating angles")
-    angle_df = calculate_angles(lm_df_smooth)
+    angle_df = calculate_angles(lm_df_smooth, side)
 
     print("[4/6] Smoothing")
     smooth_df = smooth_angles(angle_df)
@@ -743,7 +758,7 @@ def process_video(video_path, patient_id, side="right", output_csv=None):
 
 
 lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=True)
-angle_df = calculate_angles(lm_df)
+angle_df = calculate_angles(lm_df, side=SIDE)
 smooth = smooth_angles(angle_df)
 shoulder = smooth["shoulder_angle"].values
 reps = detect_reps(shoulder)
@@ -810,7 +825,7 @@ if __name__ == "__main__":
 import matplotlib.pyplot as plt
 
 lm_df    = extract_landmarks(VIDEO_PATH, SIDE, visualize=False)
-angle_df = calculate_angles(lm_df)
+angle_df = calculate_angles(lm_df, side=SIDE)
 smooth   = smooth_angles(angle_df)
 shoulder = smooth["shoulder_angle"].values
 
