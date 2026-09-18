@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH=r"C:\Users\sayal\Downloads\Patient_151_SHS_L.mp4"
-OUTPUT_CSV=r"D:\Sayalee\Major_project\Features\shs_stats1.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Yash_SHS_R" #Unique patient ID
+VIDEO_PATH=r"videos/Supine_Heel_Slides/Gauri_SHS_L.mp4"
+OUTPUT_CSV=r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Supine_Heel_Slides\supine_heel_slides_velocity.csv" #The output file that will be created to store the extracted features
+PATIENT_ID = "Gauri_SHS_L" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -155,7 +155,8 @@ def print_video_statistics(angle_df: pd.DataFrame):
         "hip_angle": "Hip angle",
         "ankle_angle": "Ankle angle",
         "pelvic_gap": "Pelvic gap",
-        "heel_y": "Heel lift"
+        "heel_y": "Heel lift",
+        "knee_velocity": "Knee Velocity"
     }
 
     for feature, vis_cols in VIS_COLS.items():
