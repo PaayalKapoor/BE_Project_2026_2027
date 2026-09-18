@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, make_scorer, fbeta_score
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedGroupKFold
+from sklearn.model_selection import StratifiedGroupKFold, GridSearchCV
 from sklearn.model_selection import train_test_split
+
+recall_weighted_scorer = make_scorer(fbeta_score, beta=2, zero_division = 0) #fbeta is used to find a harmonic mean between recall and precision. The weight depends on the beta value. 
+#if beta = 1, both, precision and recall are given the same weightage. beta > 1 provides more weightage to recall (since missed positive cases are a greater concern). beta < 1 provides more weightage to precision.
 
 df = pd.read_csv(r'C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Dataset for Exercises - HeightNormalization.csv')
 metadata = ['patient_id', 'rep_id', 'start_frame', 'end_frame', 'valley_frame']
