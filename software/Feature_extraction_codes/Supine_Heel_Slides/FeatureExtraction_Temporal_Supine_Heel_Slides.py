@@ -15,29 +15,41 @@ from mediapipe.tasks.python import vision
 import cv2
 import pandas as pd
 import numpy as np
+import math
 from scipy.signal import savgol_filter
 from scipy.signal import find_peaks
+import matplotlib.pyplot as plt
 
-VIDEO_PATH="videos/Supine_Heel_Slides/Patient_124_SHS_L.mp4"
-OUTPUT_PATH="docs/supine_heel_slides.csv"
-SIDE="left"
-
-PATIENT_ID=1
+VIDEO_PATH=r"D:\Sayalee\Projects\Major_project\Dataset_Videos\Supine_Heel_Slides\Gauri_SHS_L.mp4"
+OUTPUT_PATH=r"D:\Sayalee\Projects\Major_project\Features\shs_per_video_temp.csv"
+SIDE="right"
+PATIENT_ID="Yash"
+VIDEO_ID= "Yash_SHS_R"
 
 SLIDING_WINDOW=11
 POLY_ORDER=3    
 #tune the order of the polynomial since less order will be too stiff and more would start following the noise than signal
+REWIND_FRAMES=300        
 
-VELOCITY_THRESHOLD=2
+#velocity threshold is used in order to get the phase 
+#near peak extension and peak flexion, the patient holds the position so instantaneous velocities of those frames becomes nearly 0
+#even though the patient is essentially stationary, fluctuations (noise) in angles- amplify noise in velocity. these fluctuations around zero are the noise floor
+#thus we need to know- if the patient is stationary, how far does the calculated velocity normally wander away from zero 
+#the velocity signal itself has to be used to estimate the noise floor around zero
+VELOCITY_THRESHOLD=6
+SEGMENTATION_THRESHOLD=0.5
+MAD_MULTIPLIER=3
+KERNAL_RADIUS= 2
 
 LANDMARK_INDICES= {
-  "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32),
-  "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31),
+  "right": dict(shoulder=12, hip=24, knee=26, ankle=28, heel=30, foot=32),
+  "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, heel=29, foot=31),
 }
 
 def extract_landmarks(video_path, side):
+    print("DO NOT REWIND WHILE GENERATING THE DATASET")
     base_options= python.BaseOptions(
-        model_asset_path= "pose_landmarker_heavy.task"
+        model_asset_path= r"D:\Sayalee\Major_project\models\pose_landmarker_heavy.task"
     ) #also try with landmarker_heavy
     #BaseOptions is a configuration object that tells mediapipe how to load the model
     #It provides common model loading settings for all mediapipe tasks. All mediapipe tasks have some settings in common-
@@ -76,6 +88,8 @@ def extract_landmarks(video_path, side):
     all_frames_data=[] #this saves the whole list of landmarks that are later to be used to calculate angles. it stores the data of all frames in the video in a list
     all_frames_data_world=[] #same thing for world landmarks
 
+    segmentation_masks=[] #list to save the segmentation masks
+
     #the actual pose detector
     #this is equivalent to this. but using 'with' helps to automatically clean the resource after its use is done
     #it automatically destroys it when you leave the block. 
@@ -84,6 +98,7 @@ def extract_landmarks(video_path, side):
     #create_from_options builds the actual pose detector with the given settings
     with vision.PoseLandmarker.create_from_options(options) as detector:
         frame_number=0 #this should be out of the loop, if not at every iteration it would reset 
+        frame_idx=0
         while True:
             #STEP 1: EXTRACT EACH FRAME
             ret, frame=cap.read() #reads each frame from the video
@@ -93,7 +108,7 @@ def extract_landmarks(video_path, side):
             #this is the only way to break out of the loop, otherwise this is an infinite loop
             if not ret:
                 break
-            
+           
             #get the height and width of the frame, to actually draw the normalized coords
             height, width, _= frame.shape
 
@@ -117,7 +132,7 @@ def extract_landmarks(video_path, side):
             #this tells time elapsed where python chooses some reference point internally (it is some arbitrary point chosen by the system)
             #mediapipe cares that frame1 happened before frame2, basically, the order of the frames 
             #timestamp_ms= int(time.perf_counter()*1000)
-
+            
             result= detector.detect_for_video(
                 mp_image, #image to analyze
                 timestamp_ms #timestamp of when this image occurred 
@@ -128,7 +143,7 @@ def extract_landmarks(video_path, side):
             #detector.detect() treats each frame independently and runs the inference model on each frame (no tracking)
             #result contains the 33 landmarks
 
-            #result.pose_landmarkers is of the type list[list[NormalizedLandmark]] and is a PoseLandmarkerResult type object
+            #result.pose_landmarkers is of the type list[list[NormalizedLandmark]]. result is a PoseLandmarkerResult type object
             #[[person_0 33 landmarks in a list],[person_1 33 landmarks list]]
             #each landmark contains .x, .y, .z, .visibility, .presence (this gives the 3D coords, the visibility score- if the camera actually sees the landmark, presence score- if the model really belives that the landmark exists)
 
@@ -173,6 +188,13 @@ def extract_landmarks(video_path, side):
                 #if there were multiple, we wouldve done landmarks= resukt.pose_landmarks, not  with [0], [0] gives lms of person 1
                 world_landmarks= result.pose_world_landmarks[0] #also save world lms
 
+                #to save the segmentation masks for spatial check and append it to the list
+                #it gives out an image the same size as the input frame
+                #instead of rgb values every pixel stores the probability that it belongs to the person where 1.0 = definitely body
+                #each returned mask is an mpImage object
+                mask= result.segmentation_masks[0]
+                segmentation_masks.append(mask)
+
                 pixel_lms= [] #create an empty list to store the landmarks in pixel values in order to draw them on the skeleton overlay (opencv needs pixel values)
                 #to get lms to draw on overlay
                 for lm in landmarks: #for each landmark, convert it to pixel and append to the empty pixel_lms list                
@@ -182,10 +204,10 @@ def extract_landmarks(video_path, side):
                     #pixel_lms[n] contains same landmark as landmarks[n]
 
                 #to draw the skeleton overlay    
-                cv2.line(frame, pixel_lms[24], pixel_lms[26], (255, 0, 0), 2) #hip to knee
-                cv2.line(frame, pixel_lms[26], pixel_lms[28], (255, 0, 0), 2) #knee to ankle
-                cv2.line(frame, pixel_lms[28], pixel_lms[32], (255, 0, 0), 2) #ankle to foot
-                cv2.line(frame, pixel_lms[12], pixel_lms[24], (255, 0, 0), 2) #shoulder to hip
+                cv2.line(frame, pixel_lms[lms_indices["hip"]], pixel_lms[lms_indices["knee"]], (255, 0, 0), 2) #hip to knee
+                cv2.line(frame, pixel_lms[lms_indices["knee"]], pixel_lms[lms_indices["ankle"]], (255, 0, 0), 2) #knee to ankle
+                cv2.line(frame, pixel_lms[lms_indices["ankle"]], pixel_lms[lms_indices["foot"]], (255, 0, 0), 2) #ankle to foot
+                cv2.line(frame, pixel_lms[lms_indices["shoulder"]], pixel_lms[lms_indices["hip"]], (255, 0, 0), 2) #shoulder to hip
 
                 frame_data["detected"]=True #change to True since pose was successfully found
                 frame_data_world["detected"]=True
@@ -196,6 +218,10 @@ def extract_landmarks(video_path, side):
                 for joint_name, joint_index in lms_indices.items():
                     lm= landmarks[joint_index]
                     lmw= world_landmarks[joint_index]
+
+                    #to view the 5 coords on the skeleton overlay   
+                    x_px = int(lm.x * width)
+                    y_px = int(lm.y * height)
 
                     #f"" stands for formatted string. whatever is inside the {}, if its a variable, its value will be subsitutes
                     #suppose in some iteration, joint_name=knee. so this would become knee_x
@@ -210,21 +236,11 @@ def extract_landmarks(video_path, side):
                     frame_data_world[f"{joint_name}_y"]= lmw.y   
                     frame_data_world[f"{joint_name}_z"]= lmw.z              
 
-                    #to view the 5 coords on the skeleton overlay   
-                    x_px = int(lm.x * width)
-                    y_px = int(lm.y * height)
                     cv2.circle(frame, (x_px, y_px), 5, (0,255,0), -1)
                     #to view the exact coordinates of the concerned joints
                     text= f"{joint_name} X:{lm.x:.2f} Y:{lm.y:.2f} Z:{lm.z:.2f} Vis:{lm.visibility:.2f}"
-                    cv2.putText(
-                        frame,
-                        text,
-                        (x_px + 10, y_px),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.4,
-                        (0,255,0),
-                        1
-                    )
+                    cv2.putText(frame, text, (x_px + 10, y_px), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0,255,0), 1)
+                    cv2.putText(frame, str(frame_idx), (50,50), cv2.FONT_HERSHEY_SIMPLEX, 3, (0,0,0), 2)
 
             #in case mediapipe fails on a certain frame, that is, pose is not detected, there would be no landmarks obtained from "result"
             #in such a case, in the columns, instead of leaving them blank which would cause inconsistency, we enter None
@@ -242,12 +258,32 @@ def extract_landmarks(video_path, side):
             all_frames_data.append(frame_data)
             all_frames_data_world.append(frame_data_world)
 
+            display_frame= cv2.resize(frame,(1280,720))
+
             cv2.imshow('Pose_Detection', frame)
+            #to listen for key inputs every 25 ms
+            key= cv2.waitKey(25) & 0xFF
             #optional way to break out of loop, in order to exit before video ends 
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if key == ord('q'):
                 break
+            #to pause the video
+            elif key == ord('p'):
+                print("Video Paused. Press Any Key to Resume.")
+                cv2.waitKey(0)
+
+            #to rewind the video by 10 seconds
+            elif key == ord('r'):
+                #get the frame that opencv is currently on
+                current_frame= cap.get(cv2.CAP_PROP_POS_FRAMES)
+                #taget frame is either 0 or 300 frames before the current frame 
+                target_frame= max(0, current_frame- REWIND_FRAMES)
+                frame_idx=target_frame
+            
+                cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+                print("Rewound by 10 seconds")
 
             frame_number +=1 #increment the frame number
+            frame_idx +=1 #separate the frame id to be printed
             #after this the detector object is automatically destroyed it is no longer required
 
     cap.release()
@@ -261,6 +297,7 @@ def extract_landmarks(video_path, side):
     for col in df.columns: #df.columns gives the names of the columns in the dataframe
         if col != "detected" and col != "visibility":
             coord_cols.append(col) #append all the columns except "detected" and visibility
+    #interpolation for frames not detected 
     df[coord_cols]=df[coord_cols].interpolate(method='linear').ffill().bfill()
     #interpolate handles the nans (gaps) in between. ffill does it for the last rows and bfill for the first few rows
 
@@ -272,9 +309,184 @@ def extract_landmarks(video_path, side):
             coord_cols_w.append(col)
     dfw[coord_cols_w]=dfw[coord_cols_w].interpolate(method='linear').ffill().bfill() 
 
-    return df, dfw, fps
+    print("EXTRACTION COMPLETE")
 
-#STEP 3: CALCULATE ANGLE AND MEASUREMENTS
+    return df, dfw, fps, segmentation_masks
+
+def get_pixel_landmarks(row, width, height):
+    landmarks= {
+        "shoulder": (
+            int(row["shoulder_x"]*width),
+            int(row["shoulder_y"]*height)
+        ),
+        "hip": (
+            int(row["hip_x"]*width),
+            int(row["hip_y"]*height)
+        ),
+        "knee": (
+            int(row["knee_x"]*width),
+            int(row["knee_y"]*height)
+        ),
+        "ankle": (
+            int(row["ankle_x"]*width),
+            int(row["ankle_y"]*height)
+        ),
+        "heel":(
+            int(row["heel_x"]*width),
+            int(row["heel_y"]*height)
+        ),
+        "foot": (
+            int(row["foot_x"]*width),
+            int(row["foot_y"]*height)
+        )
+    }
+    return landmarks
+
+#STEP 3: SMOOTH THE RAW LANDMARKS
+#function 1 to smooth the landmarks- if the detected landmark is outside the body, checked using segmentation mask
+#this is then interpolated based on- either parent reconstruction or temporal interpolation
+#for parent reconstruction- if the parent landmark is trusted, recursive chain reconstruction, hermite spline with real velocity boundaries. 
+#recheck the frames that are interpolated using the hermite spline interpolation
+#if all fail- then flag rep/video as unreliable
+#this now detects three errors- if the landmark is outside the body using segmentation mask. single spike detection using hampel filter. several frames being mistracked using 
+def detect_spatial_errors(lm_df, segmentation_masks, video_path):
+    clean_df= lm_df.copy()
+    cap= cv2.VideoCapture(video_path)
+    width= int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height= int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.release()
+
+    #create columns that would flag the frame if the particular joint shows spatial error
+    clean_df["shoulder_spatial_flag"]= False
+    clean_df["hip_spatial_flag"]= False
+    clean_df["knee_spatial_flag"]= False
+    clean_df["ankle_spatial_flag"]= False
+    clean_df["foot_spatial_flag"]= False
+
+    #create columns to store the bone lengths
+    clean_df["foot_length"]= np.nan
+    clean_df["tibia_length"]= np.nan
+    clean_df["femur_length"]= np.nan
+
+    #iterate through every row of the dataframe. pass 1 to just get all the bone lengths
+    for frame_idx, row in clean_df.iterrows():
+        
+        #extract the landmark coordinates and convert each normalized landmark into pixeled and store them in a dictionary
+        landmarks= get_pixel_landmarks(row, width, height)
+
+        #compute the bone lengths by computing the eulidean distance
+        foot_bone= math.dist(landmarks["foot"],landmarks["ankle"]) #connects foot and ankle
+        tibia= math.dist(landmarks["ankle"],landmarks["knee"]) #connects ankle and knee
+        femur= math.dist(landmarks["knee"],landmarks["hip"]) #connects knee and hip 
+
+        clean_df.loc[frame_idx, "femur_length"]= femur
+        clean_df.loc[frame_idx, "tibia_length"]= tibia
+        clean_df.loc[frame_idx, "foot_length"]= foot_bone
+
+    #set the reference values around which the tolerance band will be 
+    #it is taken as the centre value because unlike mean it is resistant to outliers
+    reference_foot= clean_df["foot_length"].median()
+    reference_tibia= clean_df["tibia_length"].median()
+    reference_femur= clean_df["femur_length"].median()
+    print(f"Foot ref: {reference_foot}")
+    print(f"Tibia ref: {reference_tibia}")
+    print(f"Femur ref: {reference_femur}")
+
+    #then take the absolute deviations from the median and take the median of the absolute deviation list.
+    #that is the median absolute deviation (MAD). value of MAD (for femur length, as an example) tells that a typical femur length differs from the reference femur length by about 1 pixel
+    #median is the expected bone length and MAD is how much mediapipe normally jitter around that expected length
+    #in this way it computes deviations much larger than usual mediapipe jitter
+    #first get the absolute deviations from the median
+    clean_df["foot_length_deviation"]= (clean_df["foot_length"]- reference_foot).abs()
+    clean_df["tibia_length_deviation"]= (clean_df["tibia_length"]- reference_tibia).abs()
+    clean_df["femur_length_deviation"]= (clean_df["femur_length"]- reference_femur).abs()
+
+    #now take the median of the deviation to compute MAD for each bone length 
+    foot_mad= clean_df["foot_length_deviation"].median()
+    tibia_mad= clean_df["tibia_length_deviation"].median()
+    femur_mad= clean_df["femur_length_deviation"].median()
+    print(f"Foot MAD: {foot_mad}")
+    print(f"Tibia MAD: {tibia_mad}")
+    print(f"Femur MAD: {femur_mad}")
+
+    #compute acceptable range
+    foot_min= reference_foot - (MAD_MULTIPLIER*foot_mad)
+    foot_max= reference_foot + (MAD_MULTIPLIER*foot_mad)
+
+    tibia_min= reference_tibia - (MAD_MULTIPLIER*tibia_mad)
+    tibia_max= reference_tibia + (MAD_MULTIPLIER*tibia_mad)
+
+    femur_min= reference_femur - (MAD_MULTIPLIER*femur_mad)
+    femur_max= reference_femur + (MAD_MULTIPLIER*femur_mad)
+
+    #second pass 
+    for frame_idx, row in clean_df.iterrows():
+        foot_bone= row["foot_length"]
+        tibia= row["tibia_length"]
+        femur= row["femur_length"]
+
+        #booleans to check if the current bone length lies between the required range
+        foot_ok= foot_min <= foot_bone <= foot_max
+        tibia_ok= tibia_min <= tibia <= tibia_max
+        femur_ok= femur_min <= femur <= femur_max
+
+        #extract the seg mask for the current frame and convert it into a np array. get the height and width
+        mask= segmentation_masks[frame_idx]
+        mask_np= mask.numpy_view()
+
+        landmarks= get_pixel_landmarks(row, width, height)
+        #loop over each landmark for the particular frame
+        #in a numpy array row corresponds to the vertical position (y) and column to the horizontal position (x)
+        #compare every landmark to see if they are on the body or not
+        #store both key and its value
+        for lm_name, (x,y) in landmarks.items():
+
+            x=np.clip(x,0,width-1)
+            y=np.clip(y,0,height-1)
+            #to make the kernal to check 
+            y_min= max(0, y- KERNAL_RADIUS)
+            y_max= max(mask_np.shape[0], y+KERNAL_RADIUS+1)
+            x_min= max(0, x-KERNAL_RADIUS)
+            x_max= max(mask_np.shape[1], x+KERNAL_RADIUS-1)
+            #instead of checking the probability of a single pixel, take a 5x5 kernal around the pixel and take the max prob out of it. if it is greater than threshold, it is a part of the body
+            patch= mask_np[y_min:y_max, x_min:x_max]
+            probability= patch.max()
+
+            #probability= mask_np[y,x] #store the probability of the pixel of predicted landmark being on body
+            if probability< SEGMENTATION_THRESHOLD:
+               clean_df.loc[frame_idx, f"{lm_name}_spatial_flag"]= True
+         
+
+        if (not femur_ok) and foot_ok and tibia_ok:
+            clean_df.loc[frame_idx, "hip_spatial_flag"]= True
+
+        if (not femur_ok) and (not tibia_ok) and foot_ok:
+            clean_df.loc[frame_idx, "knee_spatial_flag"]= True
+
+        if femur_ok and (not tibia_ok) and (not foot_ok):
+            clean_df.loc[frame_idx, "ankle_spatial_flag"]= True
+
+        if femur_ok and tibia_ok and (not foot_ok):
+            clean_df.loc[frame_idx, "foot_spatial_flag"]= True
+
+
+    return clean_df
+
+def smooth_coords(coord_df):
+    smooth_coord_df= pd.DataFrame(index=coord_df.index)
+    for col in coord_df.columns:
+        signal= coord_df[col].values
+        smooth_coord_df[f"{col}"]= savgol_filter(
+            signal,
+            window_length=SLIDING_WINDOW,
+            polyorder=POLY_ORDER,
+            deriv=0,
+            mode='interp'
+        )
+    return smooth_coord_df
+
+
+#STEP 4: CALCULATE ANGLE AND MEASUREMENTS
 #to calculate angle at a point B, we need 3 points- A, B, C. the angle between vectors BA and BC is the angle at B
 #theta= cos_inv(BA.BC/|BA||BC|) cos theta is dot product of the two vectors divided by the product of their magnitudes
 # a b c are three anatomical points forming an angle, which change as per the angle required. a is point above joint, b is joint vertex and c is point below vertex
@@ -301,12 +513,25 @@ def compute_pelvic_lift(hip, shoulder):
     torso_length= np.linalg.norm(hip-shoulder) + 1e-8
     return(gap/torso_length)
 
+def compute_heel_displacement(baseline,heel):
+    heel= np.array(heel)
+    heel_disp= baseline-heel
+  
+    return heel_disp
+    
+
+
 #create a function that calculates the angles that are required
 #while passing world landmarks make, this flag true: calculate_angles(dfw, world=True) 
 def calculate_measurements(lm_df : pd.DataFrame , world=False):
     all_measurements=[] #empty list to store all measurements and later convert to dataframe. it stores everything measured for all frames over the video
     #when looping over the dataframe, both can be obtained- the serial number, (which was the frame number) as well as the entire row
-    for frame_idx, row in lm_df.iterrows():
+
+    #calculate the baseline for heel displacement
+    baseline_heel= lm_df["heel_y"].iloc[:15].median()
+    print(f"Baseline for heel: {baseline_heel}")
+
+    for frame_idx, row in lm_df.iterrows():                                                             
         frame_measurement={
             "frame": frame_idx
         }#dictionary to store data of one frame, which is later appended to the list of all frames. this stores everything measured for one frame
@@ -326,11 +551,13 @@ def calculate_measurements(lm_df : pd.DataFrame , world=False):
             hip= row[["hip_x", "hip_y"]].values
             knee= row[["knee_x", "knee_y"]].values
             ankle= row[["ankle_x", "ankle_y"]].values
+            heel= row[["heel_y"]].values
             foot= row[["foot_x", "foot_y"]].values
 
         frame_measurement["Knee_flexion"]= compute_angle(hip, knee, ankle)
         frame_measurement["Hip_flexion"]= compute_angle(shoulder, hip, knee)
         frame_measurement["Ankle_flexion"]= compute_angle(knee, ankle, foot)
+        frame_measurement["Heel_displacement"]=  compute_heel_displacement(baseline_heel, heel)
         frame_measurement["Pelvic_lift"]= compute_pelvic_lift(hip, shoulder)
         #append the angles of one frame that is stored as dictionary, to the list that contains angles of all frames
         all_measurements.append(frame_measurement)
@@ -341,7 +568,7 @@ def calculate_measurements(lm_df : pd.DataFrame , world=False):
    
     return measurement_df
 
-#STEP 4: SMOOTHEN ANGLES AND MEASUREMENTS USING SAVITZKY-GOLAY FILTER
+#STEP 5: SMOOTHEN ANGLES AND MEASUREMENTS USING SAVITZKY-GOLAY FILTER
 def smooth_measurments(angle_df : pd.DataFrame):
     smooth_df= pd.DataFrame(index=angle_df.index) #create an empty dataframe to save the smoothed values
     for col in angle_df.columns:
@@ -469,7 +696,10 @@ def detect_phase(feature_df, rep_boundaries):
         rep_data= feature_df.loc[start:end]
         #extract the knee flexion velocities of the frames belonging to the rep
         rep_velocity= rep_data["Knee_flexion_velocity"] 
-        print(rep_velocity)
+
+        #in order to calculate the noise floor around stationary values, first take the stationary velocity list in each rep
+        #the start of the rep is peak extension around which the frames are supposed to be stationary
+        #stationary_velocity= rep_velocity.loc[start:]
 
         #p1_end is the last frame in phase 1, which is full extension. start is around peak extension
         #later last frame is shifted to the last stationary frame
@@ -514,9 +744,10 @@ def detect_phase(feature_df, rep_boundaries):
     return phase_df
 
 #STEP 8: EXTRACT FEATURES INTO SINGLE DATAFRAME
-def extract_features(smooth_ang_df, temporal_df, rep_boundaries, phase_df, patient_id):
-    feature_df= pd.concat([smooth_ang_df, temporal_df, phase_df[["Phase"]]], axis=1) #axis=1 means stack column wise
+def extract_features(df, smooth_ang_df, temporal_df, rep_boundaries, phase_df, patient_id, clean_df,video_id):
+    feature_df= pd.concat([smooth_ang_df, temporal_df, df[["heel_y"]], phase_df[["Phase"]]], axis=1) #axis=1 means stack column wise
     feature_df["Patient_Id"]= patient_id
+    feature_df["Video_Id"]= video_id
 
     feature_df["Rep_Start"]= 0
     feature_df["Rep_Id"]= 0
@@ -547,23 +778,140 @@ def save_to_csv(feature_df, output_path):
             index=True
         )
 
-#STEP 10: MAIN PIPELINE
-def process_video(video_path, output_path, side, patient_id):
-    df,dfw,fps= extract_landmarks(video_path, side)
-    ang_df= calculate_measurements(df)
-    smooth_df= smooth_measurments(ang_df)
+#STEP 10: PLOT GRAPHS 
+#add all graphs
+def plot_graphs(raw_angle_df, smooth_angle_df, temporal_df, rep_boundaries):
+    plt.figure(figsize=(12,5))  
+
+    plt.plot(
+        smooth_angle_df.index,
+        smooth_angle_df["Knee_flexion_smooth"],
+        label="Knee Flexion Angle"
+    )
+    #to visualize the rep boundaries
+    for rep in rep_boundaries:
+        start= rep["rep_start"]
+        #to plot a vertical line where the rep starts        
+        plt.axvline(x=start, color="purple", linestyle="--")    
+
+    plt.plot(
+        # raw_angle_df.index,
+        # raw_angle_df["Hip_flexion"],
+        temporal_df["Knee_flexion_velocity"],
+        label="Knee Flexion Velocity",
+        #alpha=0.8 #controls transparency. this signal is drawn lighter
+    )
+
+    # plt.plot(
+    #     # smooth_angle_df.index,
+    #     # smooth_angle_df["Hip_flexion_smooth"],
+    #     temporal_df["Knee_flexion_accln"],
+    #     label="Knee Flexion Acceleration"
+    # )
+
+    plt.xlabel("Frame")
+    plt.ylabel("Knee Flexion (degrees)")
+    plt.title("Knee Flexion vs Frame")
+    plt.grid(True)
+    plt.legend()
+
+    plt.show()
+
+def show_processed_overlay(video_path,lm_df,angle_df,raw_lm_df,fps,side):
+    cap= cv2.VideoCapture(video_path)
+    lms_indices=LANDMARK_INDICES[side]
+    frame_idx=0
+    delay= int(1000/fps)
+    while True:
+        ret, frame= cap.read()
+        if not ret:
+            break
+
+        #iloc returns the row of the position frame_idx from the dataframe
+        row= lm_df.iloc[frame_idx]
+        raw_row= raw_lm_df.iloc[frame_idx]
+        height, width, _= frame.shape
+        landmarks= get_pixel_landmarks(row, width, height)
+        raw_landmarks= get_pixel_landmarks(raw_row, width, height)
+
+        cv2.line(frame, landmarks["hip"], landmarks["knee"], (255, 0, 0), 2) #hip to knee
+        cv2.line(frame, landmarks["knee"], landmarks["ankle"], (255, 0, 0), 2) #knee to ankle
+        cv2.line(frame, landmarks["ankle"], landmarks["foot"], (255, 0, 0), 2) #ankle to foot
+        cv2.line(frame, landmarks["shoulder"], landmarks["hip"], (255, 0, 0), 2) #shoulder to hip
+        #draw landmarks for every joint on the frame
+        for lm_name, (x,y) in landmarks.items():
+            cv2.circle(frame, (x, y), 5, (0,255,0), -1)
+            cv2.putText(frame, str(lm_name), (x+10,y+10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,255,0), 1)
+        for lm_name, (x,y) in raw_landmarks.items():
+            cv2.circle(frame, (x, y), 5, (0,0,255), -1)
+
+        display_frame= cv2.resize(frame,(1280,720))
+
+        cv2.imshow('Pose_Detection', display_frame)
+            #to listen for key inputs every 25 ms
+        key= cv2.waitKey(delay) & 0xFF
+        #optional way to break out of loop, in order to exit before video ends 
+        if key == ord('q'):
+            break
+        #to pause the video
+        elif key == ord('p'):
+            print("Video Paused. Press Any Key to Resume.")
+            cv2.waitKey(0)
+        #to rewind the video by 10 seconds
+        elif key == ord('r'):
+            #get the frame that opencv is currently on
+            current_frame= cap.get(cv2.CAP_PROP_POS_FRAMES)
+            #taget frame is either 0 or 300 frames before the current frame 
+            target_frame= max(0, current_frame- REWIND_FRAMES)
+
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+            print("Rewound by 10 seconds")
+
+        frame_idx=frame_idx+1
+            
+
+def process_video(video_path, output_path, side, patient_id, video_id):
+
+    #extract the landmarks into two dataframes- one with 2d normalized and another with world coords
+    df,dfw,fps, segmentation_masks= extract_landmarks(video_path, side)
+
+    #clean_df= detect_spatial_errors(df, segmentation_masks, VIDEO_PATH)
+    smooth_coord_df= smooth_coords(df)
+
+
+    #compute the angles and measurements with the extracted landmarks
+    angle_df= calculate_measurements(df)
+
+    #smooth the measurements using SG filter
+    smooth_df= smooth_measurments(angle_df)
+
+    #calculate the velocity, accln, and jerk
     temp_df= compute_temporal_features(smooth_df, fps)
     print(temp_df.head())
-    rep_b= detect_rep(smooth_df)
-    feat_df= pd.concat([smooth_df, temp_df], axis=1)
-    phase_df= detect_phase(feature_df=feat_df,rep_boundaries=rep_b)
-    feature= extract_features(smooth_df,temp_df,rep_b,phase_df,PATIENT_ID)
-    print(feature.head())
-    print(rep_b)
-    save_to_csv(feature,output_path)
+
+    #calculate the rep boundaries (reps)
+    rep_boundaries= detect_rep(smooth_df)
+    print(rep_boundaries)
+
+    #make a combines dataframe for what phase detection function needs (instead of passing two dataframes)
+    #and calculate phase boundaries
+    fdf= pd.concat([smooth_df, temp_df], axis=1)
+    phase_df= detect_phase(fdf,rep_boundaries)
+
+    #extract all features into one common dataframe
+    feature_df= extract_features(df, smooth_df,temp_df,rep_boundaries,phase_df,patient_id, smooth_coord_df,video_id)
+    print(feature_df.head())
+
+    #show_processed_overlay(VIDEO_PATH, smooth_coord_df, smooth_df, df, fps, SIDE)
+   
+    #convert this dataframe into csv and save it
+    save_to_csv(feature_df,output_path)
+
+    #plot the graphs
+    plot_graphs(angle_df,smooth_df,temp_df,rep_boundaries)
 
 def main():
-    vid_df= process_video(VIDEO_PATH, OUTPUT_PATH,SIDE,PATIENT_ID)
+    process_video(VIDEO_PATH, OUTPUT_PATH,SIDE,PATIENT_ID,VIDEO_ID)
     
 
 if __name__=="__main__":
