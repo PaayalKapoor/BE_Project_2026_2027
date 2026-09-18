@@ -40,9 +40,9 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH=r"videos/Supine_Heel_Slides/Gauri_SHS_L.mp4"
+VIDEO_PATH=r"videos/Supine_Heel_Slides/Sayalee_SHS_L_1.mp4"
 OUTPUT_CSV=r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Supine_Heel_Slides\supine_heel_slides_velocity.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Gauri_SHS_L" #Unique patient ID
+PATIENT_ID = "Sayalee_SHS_L_1" #Unique patient ID
 SIDE = "left"   #The leg that faces the camera
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
