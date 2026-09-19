@@ -24,6 +24,7 @@ import numpy as np
 import pandas as pd
 import urllib.request
 import os
+import matplotlib.pyplot as plt
 
 #Here we download the pose landmarker model which performs the following steps: 1. Detect Human, 2. Perform Pose Estimation: Identify 33 body landmarks, 3. Temporal Tracking: Track the landmarks across frames.
 #tasks API supports detection of mutliple humans in one frame unlike the older, solutions API
@@ -45,9 +46,9 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = "videos/Shoulder_Flexion/Sayalee_SHF_R_2.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Patient_179_SHF_R.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID  = "Sayalee"
+PATIENT_ID = "Patient_179_SHF_R"
 SIDE = "right"   #Here we provide the side that is facing the camera 
 
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
@@ -72,6 +73,18 @@ SIDE_LANDMARK_INDICES = {
 }
 
 print("SIDE_LANDMARKS set up successfully")
+
+def compute_angular_velocity(smooth_df: pd.DataFrame, fps: float, angle_col: str) -> np.ndarray:
+    """
+    First derivative of a smoothed angle signal, in degrees/second.
+    Same savgol-deriv trick used for knee_velocity in the heel-slides pipeline.
+    """
+    dt = 1.0 / fps
+    return savgol_filter(
+        smooth_df[angle_col].values,
+        SMOOTH_WINDOW, SMOOTH_POLY,
+        deriv=1, delta=dt
+    )
 
 def is_valid_shoulder(lms, lm_indices):
     #This function is used to check whether the correct hand is being tracked. (This was a major issue in straight leg raises and although it is not very important here since only one arm would be 
@@ -159,7 +172,6 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                 if not ret: #If no frame is being returned, we break out of the loop. Video Ended
                     break
 
-                frame = cv2.resize(frame, (420, 720))
                 height, width, _ = frame.shape
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) #OpenCV stores images in BGR format but mediapipe tasks requires the normal RGB format. Hence conversion is important
                 mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb) #Mediapipe Tasks API cannot directly use NumPy/OpenCV arrays. It expects its own image object, so we convert rgb to image object. Frame is not an object - it is a numpy array which stores the pixel values of an image.
@@ -168,7 +180,8 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                 ts_ms = int(frame_idx * 1000 / fps)
                 result = detector.detect_for_video(mp_image, ts_ms) #Stores the coordinates for a particular frame
                 #Here, we actually input the image and the time stamp into the mediapipe pose detection model. Internally mediapipe detects person, estimates pose landmarks and tracks coordinates using the previous frame.
-
+                display_frame = cv2.resize(frame, (420, 720))
+                display_height, display_width, _ = display_frame.shape
                 row = {"frame": frame_idx, "detected": False}
 
 
@@ -178,7 +191,7 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                     valid = is_valid_shoulder(lms, lm_indices) #We check if the frame is valid or not 
 
                     if visualize: #Display the video with a skeleton overlay 
-                        vis_frame = frame.copy()
+                        vis_frame = display_frame.copy()
 
                         #Draw the upper body skeleton. #POSE_CONNECTIONS is a predefined set of landmark pairs provided by MediaPipe. Each pair specifies which two body landmarks should be connected by a line to form the skeleton.
                         left_arm = [[11, 13], [13, 15]]
@@ -186,24 +199,24 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         torso = [[11, 23], [12, 24]]
 
                         if side=="right":
-                           pixel_ra1_s = [int(lms[right_arm[0][0]].x*width), int(lms[right_arm[0][0]].y*height)]
-                           pixel_ra1_e = [int(lms[right_arm[0][1]].x*width), int(lms[right_arm[0][1]].y*height)]
-                           pixel_ra2_s = [int(lms[right_arm[1][0]].x*width), int(lms[right_arm[1][0]].y*height)]
-                           pixel_ra2_e = [int(lms[right_arm[1][1]].x*width), int(lms[right_arm[1][1]].y*height)]
-                           pixel_tr_s = [int(lms[torso[0][0]].x*width), int(lms[torso[0][0]].y*height)]
-                           pixel_tr_e = [int(lms[torso[0][1]].x*width), int(lms[torso[0][1]].y*height)]
+                           pixel_ra1_s = [int(lms[right_arm[0][0]].x*display_width), int(lms[right_arm[0][0]].y*display_height)]
+                           pixel_ra1_e = [int(lms[right_arm[0][1]].x*display_width), int(lms[right_arm[0][1]].y*display_height)]
+                           pixel_ra2_s = [int(lms[right_arm[1][0]].x*display_width), int(lms[right_arm[1][0]].y*display_height)]
+                           pixel_ra2_e = [int(lms[right_arm[1][1]].x*display_width), int(lms[right_arm[1][1]].y*display_height)]
+                           pixel_tr_s = [int(lms[torso[0][0]].x*display_width), int(lms[torso[0][0]].y*display_height)]
+                           pixel_tr_e = [int(lms[torso[0][1]].x*display_width), int(lms[torso[0][1]].y*display_height)]
                            cv2.line(vis_frame, pixel_ra1_s, pixel_ra1_e, (150, 150, 150), 2)
                            cv2.line(vis_frame, pixel_ra2_s, pixel_ra2_e, (150, 150, 150), 2)
                            cv2.line(vis_frame, pixel_tr_s, pixel_tr_e, (150, 150, 150), 2)
 
 
                         if side=="left":
-                           pixel_la1_s = [int(lms[left_arm[0][0]].x*width), int(lms[left_arm[0][0]].y*height)]
-                           pixel_la1_e = [int(lms[left_arm[0][1]].x*width), int(lms[left_arm[0][1]].y*height)]
-                           pixel_la2_s = [int(lms[left_arm[1][0]].x*width), int(lms[left_arm[1][0]].y*height)]
-                           pixel_la2_e = [int(lms[left_arm[1][1]].x*width), int(lms[left_arm[1][1]].y*height)]
-                           pixel_tl_s = [int(lms[torso[1][0]].x*width), int(lms[torso[1][0]].y*height)]
-                           pixel_tl_e = [int(lms[torso[1][1]].x*width), int(lms[torso[1][1]].y*height)]
+                           pixel_la1_s = [int(lms[left_arm[0][0]].x*display_width), int(lms[left_arm[0][0]].y*display_height)]
+                           pixel_la1_e = [int(lms[left_arm[0][1]].x*display_width), int(lms[left_arm[0][1]].y*display_height)]
+                           pixel_la2_s = [int(lms[left_arm[1][0]].x*display_width), int(lms[left_arm[1][0]].y*display_height)]
+                           pixel_la2_e = [int(lms[left_arm[1][1]].x*display_width), int(lms[left_arm[1][1]].y*display_height)]
+                           pixel_tl_s = [int(lms[torso[1][0]].x*display_width), int(lms[torso[1][0]].y*display_height)]
+                           pixel_tl_e = [int(lms[torso[1][1]].x*display_width), int(lms[torso[1][1]].y*display_height)]
                            cv2.line(vis_frame, pixel_la1_s, pixel_la1_e, (150, 150, 150), 2)
                            cv2.line(vis_frame, pixel_la2_s, pixel_la2_e, (150, 150, 150), 2)
                            cv2.line(vis_frame, pixel_tl_s, pixel_tl_e, (150, 150, 150), 2)
@@ -219,8 +232,8 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         #.items() returns the joint and index of the landmark. Joint stores the joint name and idx stores the index of the mediapipe landmark
                         for joint, idx in lm_indices.items():
                             lm = lms[idx] #The landmark object - lm, contains several attributes like .x, .y, .visibility, etc.
-                            px = int(lm.x * width) #Convert the x coordinate into pixel coordinates by mutliplying it with the width of the frame
-                            py = int(lm.y * height) #Convert the y coordinate into pixel coordinates by multiplying it with the height of the frame
+                            px = int(lm.x * display_width) #Convert the x coordinate into pixel coordinates by mutliplying it with the width of the frame
+                            py = int(lm.y * display_height) #Convert the y coordinate into pixel coordinates by multiplying it with the height of the frame
                             colour = GREEN if valid else RED
                             cv2.circle(vis_frame, (px, py), 8, colour, -1) #Show a circle on the px and py coordinates
                             cv2.putText(vis_frame, joint_labels[joint],  #Display the joint name on screen close to the pixel coordinates of the landmark for a particular joint
@@ -260,7 +273,7 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         #Display the calculated angles 
                         cv2.putText(vis_frame,
                             f"Shoulder: {sho_angle:.1f}  Elbow: {elb_angle:.1f}",
-                            (20, height - 50),
+                            (20, display_height - 50),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, YELLOW, 2)
 
                         #Display the visibility of key angles 
@@ -268,25 +281,16 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         elb_vis = lms[lm_indices["elbow"]].visibility
                         wri_vis = lms[lm_indices["wrist"]].visibility
                         hip_vis = lms[lm_indices["hip"]].visibility
-                        cv2.putText(vis_frame,
-                            f"Vis — Sho:{sho_vis:.2f}  "
-                            f"Elb:{elb_vis:.2f}  Wri:{wri_vis:.2f} Hip:{hip_vis:.2f}",
-                            (20, height - 20),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.55,
-                            (200, 200, 200), 1)
+                        cv2.putText(vis_frame,f"Vis - Sho:{sho_vis:.2f}  " f"Elb:{elb_vis:.2f}  Wri:{wri_vis:.2f} Hip:{hip_vis:.2f}", (20, display_height - 20),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200, 200, 200), 1)
                         
                         #Frame Counter 
-                        cv2.putText(vis_frame,
-                            f"Frame: {frame_idx}  Invalid: {invalid_count}",
-                            (width - 300, 40),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.65,
-                            (200, 200, 200), 2)
+                        cv2.putText(vis_frame, f"Frame: {frame_idx}  Invalid: {invalid_count}", (display_width - 300, 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (200, 200, 200), 2)
 
                         if paused:
-                            cv2.putText(vis_frame, "PAUSED",
-                                        (width//2 - 60, 40),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        WHITE, 2)
+                            cv2.putText(vis_frame, "PAUSED", (display_width//2 - 60, 40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, WHITE, 2)
 
                         cv2.imshow("Shoulder Flexion Extraction", vis_frame)
 
@@ -580,10 +584,8 @@ def assign_states(shoulder_angles, start, peak, end):
     return states
 
 
-ANGLE_COLS = ["shoulder_angle", "elbow_angle", "trunk_angle",
-                "shoulder_height", "wrist_elbow_gap"] #An array is defined that stores the 5 main angles
-ANGLE_LABELS = ["shoulder",       "elbow",       "trunk",
-                "sho_height",     "wrist_gap"] #Stores the labels
+ANGLE_COLS = ["shoulder_angle", "elbow_angle", "trunk_angle","shoulder_height", "wrist_elbow_gap", "shoulder_velocity", "shoulder_acceleration"] #An array is defined that stores the 5 main angles
+ANGLE_LABELS = ["shoulder", "elbow", "trunk", "sho_height", "wrist_gap", "velocity", "acceleration"] #Stores the labels
 N_STATES = 4 #States of the exercise 
 VIS_THRESHOLD = 0.5
 VIS_COLS = {
@@ -592,6 +594,8 @@ VIS_COLS = {
     "trunk_angle": ["hip_vis", "shoulder_vis"],
     "shoulder_height": ["hip_vis", "shoulder_vis"],
     "wrist_elbow_gap": ["elbow_vis", "wrist_vis"],
+    "shoulder_velocity": ["hip_vis", "shoulder_vis", "elbow_vis"],
+    "shoulder_acceleration": ["hip_vis", "shoulder_vis", "elbow_vis"],
 } #A visibility threshold is added to ensure that only frames that have a visibility above the given thresholds for the key joints required would be considered and the frames with lower
 #visibility will be rejected.
 
@@ -696,6 +700,22 @@ def compute_rep_features(angle_df, rep, states, patient_id):
     row["s2_s4_speed_ratio"] = (
         row["S2_duration"] / (row["S4_duration"] + 1e-8)
     )
+    #Compare velocity in the FIRST HALF of S2 vs the SECOND HALF.
+    #Momentum = high early velocity that isn't sustained (ratio > 1).
+    #Controlled lift = velocity builds and holds more evenly (ratio closer to 1).
+    s2_mask = (states == 2)
+    s2_frames = rep_angle_df[s2_mask]
+    if len(s2_frames) >= 4:
+        midpoint = len(s2_frames) // 2
+        early_vel = s2_frames["shoulder_velocity"].iloc[:midpoint].abs().mean()
+        late_vel  = s2_frames["shoulder_velocity"].iloc[midpoint:].abs().mean()
+        row["s2_momentum_ratio"] = early_vel / (late_vel + 1e-8)
+    else:
+        row["s2_momentum_ratio"] = np.nan
+
+    # Overshoot: does the shoulder angle exceed its own S3 mean at some point
+    # then settle back down — i.e. did the arm swing past the controlled peak?
+    row["peak_overshoot"] = row["S3_shoulder_max"] - row["S3_shoulder_mean"]
 
     return row
 
@@ -710,6 +730,7 @@ def process_video(video_path, patient_id, side="right", output_csv=None):
     #Here we call all the functions defined above 
     print("\n[1/6] Extracting landmarks")
     lm_df = extract_landmarks(video_path, side, visualize=False)
+    fps = lm_df.attrs.get("fps", 30.0)
 
     print("[2/6] Smoothing landmarks")         
     lm_df_smooth = smooth_landmarks(lm_df) 
@@ -719,6 +740,17 @@ def process_video(video_path, patient_id, side="right", output_csv=None):
 
     print("[4/6] Smoothing")
     smooth_df = smooth_angles(angle_df)
+    smooth_df["shoulder_velocity"] = compute_angular_velocity(smooth_df, fps, "shoulder_angle")
+    smooth_df["shoulder_acceleration"] = savgol_filter( smooth_df["shoulder_angle"].values, SMOOTH_WINDOW, SMOOTH_POLY, deriv=2, delta=(1.0/fps))
+
+    plt.figure(figsize=(14, 4))
+    plt.plot(smooth_df.index, smooth_df["shoulder_acceleration"].values)
+    plt.title("Shoulder angular acceleration over time")
+    plt.xlabel("Frame")
+    plt.ylabel("degrees/sec²")
+    plt.grid(alpha=0.3)
+    plt.axhline(0, color='gray', lw=0.8)
+    plt.show()
 
     print("[5/6] Detecting reps")
     shoulder = smooth_df["shoulder_angle"].values
@@ -766,6 +798,8 @@ reps = detect_reps(shoulder)
 for rep in reps:
     print(f"Rep {rep['rep_id']}: Peak at frame {rep['peak_frame']}, "
           f"shoulder = {shoulder[rep['peak_frame']]:.1f}°")
+
+
 
 
 def plot_rep_debug(smooth_df, reps, shoulder):
@@ -836,3 +870,4 @@ plt.xlabel("Frame")
 plt.ylabel("Degrees")
 plt.grid(alpha=0.3)
 plt.show()
+
