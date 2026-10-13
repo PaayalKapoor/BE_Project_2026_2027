@@ -5,6 +5,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedGroupKFold, GridSearchCV
 from sklearn.model_selection import train_test_split
+import joblib
 
 recall_weighted_scorer = make_scorer(fbeta_score, beta=2, zero_division = 0) #fbeta is used to find a harmonic mean between recall and precision. The weight depends on the beta value. 
 #if beta = 1, both, precision and recall are given the same weightage. beta > 1 provides more weightage to recall (since missed positive cases are a greater concern). beta < 1 provides more weightage to precision.
@@ -24,7 +25,7 @@ drop = ['S1_knee_mean', 'S1_knee_std', 'S1_hip_mean', 'S1_hip_std', 'S1_ankle_me
         'S2_knee_range', 'S3_knee_range', 'S4_knee_range', 'S1_velocity_vis_frames', 'S2_velocity_vis_frames', 'S3_velocity_vis_frames', 'S4_velocity_vis_frames', 'label_correct']
 
     
-def train_binary_model_ada(df, target_label, other_label):
+def train_binary_model_lr(df, target_label, other_label):
     drop_cols = drop + [other_label] #Drop certain columns that do not contribute as much to the model's prediction along with the other label (already present in the dataset)
     feature_cols = [c for c in df.columns if c not in [target_label] + drop_cols + metadata] #Feature set
 
@@ -49,13 +50,15 @@ def train_binary_model_ada(df, target_label, other_label):
         lr_model = LogisticRegression(random_state=42, class_weight="balanced", max_iter=1000) #Load the adaboost model into a variable
         lr_model.fit(X_train, y_train) #Train the model
         y_pred = lr_model.predict(X_test) #Make predictions
+        print(y_pred)
         #Print the metrics for each fold
         f1 = f1_score(y_test, y_pred, zero_division=0)
         recall = recall_score(y_test, y_pred, zero_division=0)
         precision = precision_score(y_test, y_pred, zero_division=0)
         accuracy = accuracy_score(y_test, y_pred)
 
-        print(f"  Fold {fold}: F1={f1:.3f}, Recall={recall:.3f}, "
+
+        print(f"Fold {fold}: F1={f1:.3f}, Recall={recall:.3f}, "
               f"Precision={precision:.3f}, test_positives={y_test.sum()}")
 
         fold_metrics.append({"fold": fold, "accuracy": accuracy, "precision": precision,
@@ -76,14 +79,16 @@ def train_binary_model_ada(df, target_label, other_label):
     print(coefficients.abs().sort_values(ascending=False).head(10).index) #Interpretation: If it is a positive coefficient - higher value indicates a higher probability of label = 1
     #Negative coefficient - higher value is associated with a lower probability of label = 1
 
-    return final_model, metrics_df
+    return final_model, metrics_df 
 
 
 print("Heel Lift Model")
-heel_model_ada, heel_metrics_ada = train_binary_model_ada(df, 'label_heel_lift', 'label_speed_error')
+heel_model_lr, heel_metrics_lr = train_binary_model_lr(df, 'label_heel_lift', 'label_speed_error')
+joblib.dump(heel_model_lr, "heel_model_lr.joblib")
 
 print("Velocity Error Model")
-velocity_model_ada, velocity_metrics_ada = train_binary_model_ada(df, 'label_speed_error', 'label_heel_lift',) 
+velocity_model_lr, velocity_metrics_lr = train_binary_model_lr(df, 'label_speed_error', 'label_heel_lift',) 
+joblib.dump(velocity_model_lr, "velocity_model_lr.joblib")
 
 import sklearn
 print(sklearn.__version__)

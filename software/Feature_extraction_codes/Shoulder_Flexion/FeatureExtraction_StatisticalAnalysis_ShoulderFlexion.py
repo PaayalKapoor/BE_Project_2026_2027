@@ -46,10 +46,10 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Patient_179_SHF_R.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Patient_156_SHF_L.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID = "Patient_179_SHF_R"
-SIDE = "right"   #Here we provide the side that is facing the camera 
+PATIENT_ID = "Patient_156_SHF_L"
+SIDE = "left"   #Here we provide the side that is facing the camera 
 
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
