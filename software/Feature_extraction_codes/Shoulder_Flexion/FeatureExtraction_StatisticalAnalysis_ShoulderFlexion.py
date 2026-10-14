@@ -46,11 +46,13 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Patient_156_SHF_L.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Sayalee_SHF_L_1.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID = "Patient_156_SHF_L"
+PATIENT_ID = "Sayalee_SHF_L_1"
 SIDE = "left"   #Here we provide the side that is facing the camera 
-
+PATIENT_HEIGHT_CM = 164
+NOSE_TO_VERTEX_CM = 11.0
+VIS_THRESHOLD = 0.5
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -68,51 +70,53 @@ REP_MIN_DISTANCE   = 50    #min no of frames between detected repetitions to pre
 
 #Here, we define landmark indices that we require. Depending on the side landmark indices are called. 
 SIDE_LANDMARK_INDICES = {
-    "right": dict(hip=24, shoulder=12, elbow=14, wrist=16),
-    "left":  dict(hip=23, shoulder=11, elbow=13, wrist=15),
+    "right": dict(hip=24, shoulder=12, elbow=14, wrist=16, nose = 0, heel = 30),
+    "left":  dict(hip=23, shoulder=11, elbow=13, wrist=15, nose = 0, heel = 29),
 }
+JOINTS = ["hip", "shoulder", "elbow", "wrist", "nose", "heel"]
 
 print("SIDE_LANDMARKS set up successfully")
 
-def compute_angular_velocity(smooth_df: pd.DataFrame, fps: float, angle_col: str) -> np.ndarray:
+def compute_angular_velocity(smooth_df: pd.DataFrame, fps: float, angle_col: str, window) -> np.ndarray:
     """
     First derivative of a smoothed angle signal, in degrees/second.
     Same savgol-deriv trick used for knee_velocity in the heel-slides pipeline.
     """
-    dt = 1.0 / fps
-    return savgol_filter(
-        smooth_df[angle_col].values,
-        SMOOTH_WINDOW, SMOOTH_POLY,
-        deriv=1, delta=dt
-    )
+    return savgol_filter(smooth_df[angle_col].values, window, SMOOTH_POLY,
+                         deriv=1, delta=1.0/fps)
 
 def is_valid_shoulder(lms, lm_indices):
-    #This function is used to check whether the correct hand is being tracked. (This was a major issue in straight leg raises and although it is not very important here since only one arm would be 
-    #visible at all times in the side view frame, however it has been added as an additional security.)
-    shoulder_x = lms[lm_indices["shoulder"]].x
-    shoulder_y = lms[lm_indices["shoulder"]].y
-    elbow_x    = lms[lm_indices["elbow"]].x
-    elbow_y    = lms[lm_indices["elbow"]].y
-    wrist_x    = lms[lm_indices["wrist"]].x
-    wrist_y    = lms[lm_indices["wrist"]].y
-
-    #For shoulder flexion the elbow must stay near straight (170-180°) throughout the movement. If the elbow angle drops significantly it means either MediaPipe grabbed the wrong landmark or the patient
-    #is bending their elbow as a compensation pattern.
-    ba = np.array([shoulder_x - elbow_x, shoulder_y - elbow_y])
-    bc = np.array([wrist_x    - elbow_x, wrist_y    - elbow_y])
-    denom = np.linalg.norm(ba) * np.linalg.norm(bc) + 1e-8
-    cos_val = np.dot(ba, bc) / denom
-    elbow_angle = float(np.degrees(np.arccos(np.clip(cos_val, -1.0, 1.0))))
-
-    if elbow_angle < 90:
-        return False
-    
-    #Here, we check the visibility of the wrist
-    if lms[lm_indices["wrist"]].visibility < 0.3:
-        return False
-
+    for j in ("shoulder", "elbow", "wrist"):
+        if lms[lm_indices[j]].visibility < 0.3:
+            return False
     return True
 
+def _visible(df, vis_cols, threshold=VIS_THRESHOLD):
+    """
+    Row-wise mask: True only where EVERY listed visibility column is
+    >= threshold for that row. A feature computed from multiple landmarks
+    (e.g. knee_angle needs hip, knee AND ankle) is only kept when all of
+    them cleared the threshold, not just the one sharing its name.
+    """
+    cols = [c for c in vis_cols if c in df.columns]
+    if not cols:
+        return pd.Series(True, index=df.index)
+    return (df[cols] >= threshold).all(axis=1)
+
+def compute_pixels_per_cm(lm_df, patient_height_cm):
+    ok = (lm_df["nose_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
+    if ok.sum() == 0:
+        raise ValueError("No frames with visible nose and heel; cannot calibrate")
+    span_px = np.median(np.hypot(
+        lm_df.loc[ok, "nose_x"] - lm_df.loc[ok, "heel_x"],
+        lm_df.loc[ok, "nose_y"] - lm_df.loc[ok, "heel_y"]))
+    return float(span_px / (patient_height_cm - NOSE_TO_VERTEX_CM))
+
+def _shoulder_elevation(shoulder_xy, hip_xy, px_per_cm):
+    return float(np.linalg.norm(shoulder_xy - hip_xy) / px_per_cm)
+
+def _wrist_above_elbow(wrist_xy, elbow_xy, px_per_cm):
+    return float((elbow_xy[1] - wrist_xy[1]) / px_per_cm)
 
 def extract_landmarks(video_path: str, side: str = "right", visualize: bool = False) -> pd.DataFrame:
     #This function extracts key landmarks required to calculate angles like shoulder flexion, trunk lean, etc.
@@ -152,9 +156,11 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
     if not cap.isOpened():
         raise FileNotFoundError(f"Cannot open video: {video_path}")
 
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
+
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0 #Here we define the frames per second for the video. It is either extracted from the video data or is set to a default value of 30
-    #width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
-    #height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
+    
 
     invalid_count = 0 #Count of frames that are treated as invalid
     paused = False #State of the video
@@ -227,6 +233,8 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                             "shoulder": "SHO",
                             "elbow":    "ELB",
                             "wrist":    "WRI",
+                            "nose": "NOS", 
+                            "heel": "HEL"
                         }
                         #lm_indices is a dictionary that stores the mapping between the joint names and their corresponding MediaPipe landmark indices.
                         #.items() returns the joint and index of the landmark. Joint stores the joint name and idx stores the index of the mediapipe landmark
@@ -249,14 +257,11 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
 
                         #Live angles. #lms is the landmark object that has attributes like .x, .y and .visibility. lm_indices["hip"] gives us the landmark of the hip, which might be 23. We could have written lms[23] 
                         #directly but writing it this way makes it more readable. hip_lm contains all the information required (such x, y and visibility data) about the hip landmark of the detected side 
-                        hip_arr  = np.array([lms[lm_indices["hip"]].x,
-                                             lms[lm_indices["hip"]].y])
-                        sho_arr  = np.array([lms[lm_indices["shoulder"]].x,
-                                             lms[lm_indices["shoulder"]].y])
-                        elb_arr  = np.array([lms[lm_indices["elbow"]].x,
-                                             lms[lm_indices["elbow"]].y])
-                        wri_arr  = np.array([lms[lm_indices["wrist"]].x,
-                                             lms[lm_indices["wrist"]].y])
+                        scale = np.array([frame_width, frame_height])
+                        hip_arr  = np.array([lms[lm_indices["hip"]].x, lms[lm_indices["hip"]].y]) * scale
+                        sho_arr  = np.array([lms[lm_indices["shoulder"]].x, lms[lm_indices["shoulder"]].y]) * scale
+                        elb_arr  = np.array([lms[lm_indices["elbow"]].x, lms[lm_indices["elbow"]].y]) * scale
+                        wri_arr  = np.array([lms[lm_indices["wrist"]].x, lms[lm_indices["wrist"]].y]) * scale
 
                         def cal_angle(a, b, c): #Here we calculate the angles to display on the screen
                             ba = a - b; bc = c - b
@@ -337,12 +342,18 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
     cap.release()
 
     df = pd.DataFrame(records).set_index("frame") #pandas converts list into a table and the frame number is set as the index
-
     #Fill short detection gaps (≤ 5 consecutive frames). Here we select columns ending in _x and _y and fill small gaps by either forward filling or backward filling.
     #In forward filling the values are filled with a known value before it. This is done for a maximum of 5 consecutive frames.
     #In backward filling the values are filled with a known value after it. Forward fill handles missing middle values and backward fill handles missing beginning values.
+    df.attrs["frame_width"]  = frame_width
+    df.attrs["frame_height"] = frame_height
+    df.attrs["fps"]          = fps
+
     coord_cols = [c for c in df.columns if c.endswith("_x") or c.endswith("_y")]
-    df[coord_cols] = df[coord_cols].interpolate(method="linear", limit_direction="both") 
+    df[coord_cols] = df[coord_cols].interpolate(method="linear", limit=5, limit_direction="both")
+    if df[coord_cols].isna().any().any():
+        print("  WARNING: gaps > 5 frames remain; filling so smoothing does not break")
+        df[coord_cols] = df[coord_cols].ffill().bfill()
 
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
     print(f"{frame_idx} frames | detection rate: {detection_rate:.1f}%")
@@ -420,29 +431,9 @@ def _trunk_lean(shoulder_xy, hip_xy, side: str):
         angle = -1 * angle
     return angle
 
-def _shoulder_elevation(shoulder_xy, hip_xy):
-    """
-    Normalised vertical height of shoulder relative to hip.
-    Computed as (hip_y - shoulder_y) / torso_length.
-    In image coordinates shoulder rising = shoulder_y decreasing
-    so this value increases as the shoulder rises (shrugging).
-    Normalised by torso length to remove camera distance dependency.
-    """
-    torso_length = np.linalg.norm(shoulder_xy - hip_xy) + 1e-8
-    return float((hip_xy[1] - shoulder_xy[1]) / torso_length)
 
-def _wrist_above_elbow(wrist_xy, elbow_xy, torso_length):
-    """
-    Normalised vertical offset of wrist relative to elbow.
-    Positive = wrist is higher than elbow in the frame (correct position).
-    Negative = wrist has dropped below elbow (compensation/fatigue).
-    Normalised by torso length for camera distance independence.
-    """
-    #In image coords, higher = smaller y value since it follows an opposite axis
-    #So wrist above elbow means wrist_y < elbow_y
-    return float((elbow_xy[1] - wrist_xy[1]) / torso_length)
 
-def calculate_angles(lm_df: pd.DataFrame, side: str) -> pd.DataFrame:
+def calculate_angles(lm_df: pd.DataFrame, side: str, px_per_cm) -> pd.DataFrame:
     """
     Calculates five angles for shoulder flexion:
     1. shoulder_angle - hip-shoulder-elbow. Primary tracking angle. Starts near 180° (arm at side), decreases as arm raises.
@@ -470,14 +461,17 @@ def calculate_angles(lm_df: pd.DataFrame, side: str) -> pd.DataFrame:
             "shoulder_angle": shoulder_angle,
             "elbow_angle": _angle_3pt(shoulder, elbow, wrist),
             "trunk_angle": _trunk_lean(shoulder, hip, side),
-            "shoulder_height": _shoulder_elevation(shoulder, hip),
-            "wrist_elbow_gap": _wrist_above_elbow(wrist, elbow, torso_length),
+            "shoulder_height": _shoulder_elevation(shoulder, hip, px_per_cm),
+            "wrist_elbow_gap": _wrist_above_elbow(wrist, elbow, px_per_cm),
             "shoulder_vis": r["shoulder_vis"],
             "elbow_vis": r["elbow_vis"],
             "wrist_vis": r["wrist_vis"],
+            "hip_vis": r["hip_vis"]
         })
 
-    return pd.DataFrame(rows).set_index("frame") #Set the frame as the index of the row
+    out = pd.DataFrame(rows).set_index("frame")
+    out["shoulder_angle"] = np.degrees(np.unwrap(np.radians(out["shoulder_angle"].values)))
+    return out
 
 #This function takes the raw angles that were calculated and smooths them using the savitzky golay filter
 def smooth_angles(angle_df: pd.DataFrame) -> pd.DataFrame:
@@ -587,7 +581,6 @@ def assign_states(shoulder_angles, start, peak, end):
 ANGLE_COLS = ["shoulder_angle", "elbow_angle", "trunk_angle","shoulder_height", "wrist_elbow_gap", "shoulder_velocity", "shoulder_acceleration"] #An array is defined that stores the 5 main angles
 ANGLE_LABELS = ["shoulder", "elbow", "trunk", "sho_height", "wrist_gap", "velocity", "acceleration"] #Stores the labels
 N_STATES = 4 #States of the exercise 
-VIS_THRESHOLD = 0.5
 VIS_COLS = {
     "shoulder_angle": ["hip_vis", "shoulder_vis", "elbow_vis"],
     "elbow_angle": ["shoulder_vis", "elbow_vis", "wrist_vis"],
@@ -607,8 +600,31 @@ STAT_FUNCS = {
     "range": lambda x: float(np.max(x) - np.min(x)),
     "std":   np.std,
 }
+def compute_video_baseline(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict) -> float:
+    """
+    Pool S1 (extended-state) heel_y frames across ALL reps in the video
+    to get one stable baseline, rather than recomputing it per rep from
+    a small handful of frames each time.
+    """
+    s1_shoulder_shrug_values = []
 
-def compute_rep_features(angle_df, rep, states, patient_id):
+    for rep in reps:
+        start, end = rep["start_frame"], rep["end_frame"]
+        states = states_by_rep[rep["rep_id"]]
+        rep_df = smooth_df.loc[start:end].copy()
+        rep_df["state"] = states
+
+        valid = _visible(rep_df, ["shoulder_vis", "hip_vis"])
+        s1_mask = (rep_df["state"] == 1) & valid
+        s1_shoulder_shrug_values.extend(rep_df.loc[s1_mask, "shoulder_height"].values)
+
+    if len(s1_shoulder_shrug_values) == 0:
+        #fallback: no clean S1 frames anywhere in the video
+        return np.nan
+
+    return float(np.median(s1_shoulder_shrug_values))
+
+def compute_rep_features(angle_df, rep, states, patient_id, baseline: float, fps):
     """
     Computes per-state statistics for a single rep.
     Also computes derived features relative to S1 baseline to
@@ -688,10 +704,10 @@ def compute_rep_features(angle_df, rep, states, patient_id):
 
     #How much the shoulder shrugged from its own resting height. shoulder_height increases as shoulder rises toward the ear
     row["shoulder_shrug_s2"] = (
-        row["S2_sho_height_mean"] - row["S1_sho_height_mean"]
+        row["S2_sho_height_mean"] - baseline
     )
     row["shoulder_shrug_s3"] = (
-        row["S3_sho_height_mean"] - row["S1_sho_height_mean"]
+        row["S3_sho_height_mean"] - baseline
     )
 
     #Speed symmetry - is the patient lowering with control?
@@ -703,103 +719,94 @@ def compute_rep_features(angle_df, rep, states, patient_id):
     #Compare velocity in the FIRST HALF of S2 vs the SECOND HALF.
     #Momentum = high early velocity that isn't sustained (ratio > 1).
     #Controlled lift = velocity builds and holds more evenly (ratio closer to 1).
-    s2_mask = (states == 2)
-    s2_frames = rep_angle_df[s2_mask]
+    # s2_mask = (states == 2)
+    # s2_frames = rep_angle_df[s2_mask]
+    # if len(s2_frames) >= 4:
+    #     midpoint = len(s2_frames) // 2
+    #     early_vel = s2_frames["shoulder_velocity"].iloc[:midpoint].abs().mean()
+    #     late_vel  = s2_frames["shoulder_velocity"].iloc[midpoint:].abs().mean()
+    #     row["s2_momentum_ratio"] = early_vel / (late_vel + 1e-8)
+    # else:
+    #     row["s2_momentum_ratio"] = np.nan
+    s2_frames = rep_angle_df[states == 2]
+    s2_frames = s2_frames[_visible(s2_frames, VIS_COLS["shoulder_velocity"])]
     if len(s2_frames) >= 4:
-        midpoint = len(s2_frames) // 2
-        early_vel = s2_frames["shoulder_velocity"].iloc[:midpoint].abs().mean()
-        late_vel  = s2_frames["shoulder_velocity"].iloc[midpoint:].abs().mean()
-        row["s2_momentum_ratio"] = early_vel / (late_vel + 1e-8)
+        v = s2_frames["shoulder_velocity"].abs().values
+        mid = len(v) // 2
+        row["s2_momentum_ratio"]  = v[:mid].mean() / (v[mid:].mean() + 1e-8)
+        row["s2_peak_to_mean_vel"] = v.max() / (v.mean() + 1e-8)
+        row["s2_time_to_peak_vel"] = int(np.argmax(v)) / len(v)   # 0 = early, 1 = late
     else:
-        row["s2_momentum_ratio"] = np.nan
+        row["s2_momentum_ratio"] = row["s2_peak_to_mean_vel"] = row["s2_time_to_peak_vel"] = np.nan
 
     # Overshoot: does the shoulder angle exceed its own S3 mean at some point
     # then settle back down — i.e. did the arm swing past the controlled peak?
-    row["peak_overshoot"] = row["S3_shoulder_max"] - row["S3_shoulder_mean"]
+    #row["peak_overshoot"] = row["S3_shoulder_max"] - row["S3_shoulder_mean"]
+    pk = rep["peak_frame"]
+    h = max(1, int(0.25 * fps))
+    hold = angle_df["shoulder_angle"].loc[max(start, pk-h):min(end, pk+h)].values
+    row["peak_overshoot"] = float(np.max(hold) - np.median(hold))
 
     return row
 
 #Processes everything and calls all the functions defined above
 #Basic input arguments are provided here which would be required to process the video and save its data in a pandas dataframe such as the path of the video,
 #patient id, the side of the exercise. One video is processed here.
-def process_video(video_path, patient_id, side="right", output_csv=None):
-    print(f"\n{'='*60}")
-    print(f"Video : {os.path.basename(video_path)}")
-    print(f"Patient : {patient_id} | Side: {side}")
-    print(f"{'='*60}")
-    #Here we call all the functions defined above 
-    print("\n[1/6] Extracting landmarks")
-    lm_df = extract_landmarks(video_path, side, visualize=False)
-    fps = lm_df.attrs.get("fps", 30.0)
+def process_video(video_path, patient_id, side="right", output_csv=None, visualize=False, patient_height_cm=PATIENT_HEIGHT_CM):
+    print(f"\n{'='*60}\nVideo : {os.path.basename(video_path)}\nPatient : {patient_id} | Side: {side}\n{'='*60}")
 
-    print("[2/6] Smoothing landmarks")         
-    lm_df_smooth = smooth_landmarks(lm_df) 
+    print("\n[1/6] Extracting landmarks")
+    lm_df = extract_landmarks(video_path, side, visualize=visualize)
+    fps = lm_df.attrs["fps"]
+    W, H = lm_df.attrs["frame_width"], lm_df.attrs["frame_height"]
+
+    print("[2/6] Smoothing landmarks, converting to pixels")
+    lm_df = smooth_landmarks(lm_df)
+    for j in JOINTS:
+        lm_df[f"{j}_x"] *= W
+        lm_df[f"{j}_y"] *= H
+    px_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm)
 
     print("[3/6] Calculating angles")
-    angle_df = calculate_angles(lm_df_smooth, side)
+    angle_df  = calculate_angles(lm_df, side, px_per_cm)
 
     print("[4/6] Smoothing")
     smooth_df = smooth_angles(angle_df)
-    smooth_df["shoulder_velocity"] = compute_angular_velocity(smooth_df, fps, "shoulder_angle")
-    smooth_df["shoulder_acceleration"] = savgol_filter( smooth_df["shoulder_angle"].values, SMOOTH_WINDOW, SMOOTH_POLY, deriv=2, delta=(1.0/fps))
-
-    plt.figure(figsize=(14, 4))
-    plt.plot(smooth_df.index, smooth_df["shoulder_acceleration"].values)
-    plt.title("Shoulder angular acceleration over time")
-    plt.xlabel("Frame")
-    plt.ylabel("degrees/sec²")
-    plt.grid(alpha=0.3)
-    plt.axhline(0, color='gray', lw=0.8)
-    plt.show()
+    dw = int(0.7 * fps); dw += (dw % 2 == 0)      # odd window, ~0.7 s
+    smooth_df["shoulder_velocity"] = compute_angular_velocity(smooth_df, fps, "shoulder_angle", dw)
+    smooth_df["shoulder_acceleration"] = savgol_filter(
+    smooth_df["shoulder_angle"].values, dw, SMOOTH_POLY, deriv=2, delta=1.0/fps)
 
     print("[5/6] Detecting reps")
     shoulder = smooth_df["shoulder_angle"].values
-    reps     = detect_reps(shoulder)
-
+    reps = detect_reps(shoulder)
     if not reps:
         return pd.DataFrame()
 
     print("[6/6] Segmenting states & computing features")
+    states_by_rep = {r["rep_id"]: assign_states(shoulder, r["start_frame"], r["peak_frame"], r["end_frame"])
+                     for r in reps}
+    baseline = compute_video_baseline(smooth_df, reps, states_by_rep)
+
     all_rows = []
+    for rep in reps:
+        states = states_by_rep[rep["rep_id"]]
+        all_rows.append(compute_rep_features(smooth_df, rep, states, patient_id, baseline, fps=30.0))
+        s = shoulder[rep["start_frame"]:rep["end_frame"]+1]
+        print(f"Rep {rep['rep_id']:>2} | frames {rep['start_frame']}–{rep['end_frame']} "
+              f"| shoulder {s.min():.1f}°→{s.max():.1f}° | "
+              + "  ".join(f"S{k}={int((states==k).sum())}f" for k in range(1, 5)))
 
-    for rep in reps: #We loop through all the detected reps
-        start = rep["start_frame"]
-        end = rep["end_frame"]
-        peak = rep["peak_frame"]
-
-        states = assign_states(shoulder, start, peak, end)
-        row = compute_rep_features(smooth_df, rep, states, patient_id)
-        all_rows.append(row)
-
-        s_slice = shoulder[start:end+1] #Separate the frames of a particular rep
-        print(f"Rep {rep['rep_id']:>2} | frames {start}–{end} "
-            f"| shoulder {s_slice.max():.1f}°→{s_slice.min():.1f}° "
-            f"| "
-            + "  ".join(f"S{s}={int((states==s).sum())}f" for s in range(1, 5))) #Prints how long a state lasts in terms of frames. S2 = 3f
-
-    result_df = pd.DataFrame(all_rows) #Final data that is converted into a pandas data frame and stored in result_df
+    result_df = pd.DataFrame(all_rows)
 
     if output_csv:
-        file_exists = os.path.isfile(output_csv)
-        result_df.to_csv(output_csv, mode='a', header=not file_exists, index=False)
-        print(f"\n  Saved → {output_csv} "
-              f"({'appended' if file_exists else 'created'})")
-
-    print(f"\n  Done: {len(result_df)} rep(s) × {len(result_df.columns)} columns")
+        if os.path.isfile(output_csv):
+            existing = pd.read_csv(output_csv, usecols=["patient_id"])
+            if patient_id in set(existing["patient_id"]):
+                print(f"  {patient_id} already in CSV; not appending")
+                return result_df
+        result_df.to_csv(output_csv, mode="a", header=not os.path.isfile(output_csv), index=False)
     return result_df
-
-
-lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=True)
-angle_df = calculate_angles(lm_df, side=SIDE)
-smooth = smooth_angles(angle_df)
-shoulder = smooth["shoulder_angle"].values
-reps = detect_reps(shoulder)
-
-for rep in reps:
-    print(f"Rep {rep['rep_id']}: Peak at frame {rep['peak_frame']}, "
-          f"shoulder = {shoulder[rep['peak_frame']]:.1f}°")
-
-
 
 
 def plot_rep_debug(smooth_df, reps, shoulder):
@@ -848,26 +855,8 @@ if __name__ == "__main__":
         patient_id = PATIENT_ID,
         side = SIDE,
         output_csv = OUTPUT_CSV,
+        visualize = True
     )
 
-    if not df.empty:
-        print("\nColumn list:")
-        for c in df.columns:
-            print(f"  {c}")
-        print(f"\nSample row:\n{df.iloc[0].to_string()}")
 
-import matplotlib.pyplot as plt
-
-lm_df    = extract_landmarks(VIDEO_PATH, SIDE, visualize=False)
-angle_df = calculate_angles(lm_df, side=SIDE)
-smooth   = smooth_angles(angle_df)
-shoulder = smooth["shoulder_angle"].values
-
-plt.figure(figsize=(14, 4))
-plt.plot(shoulder)
-plt.title("Shoulder angle over time")
-plt.xlabel("Frame")
-plt.ylabel("Degrees")
-plt.grid(alpha=0.3)
-plt.show()
 
