@@ -51,7 +51,7 @@ OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
 PATIENT_ID = "Sayalee_SHF_L_1"
 SIDE = "left"   #Here we provide the side that is facing the camera 
 PATIENT_HEIGHT_CM = 164
-NOSE_TO_VERTEX_CM = 11.0
+EYE_TO_VERTEX_FRAC = 0.065
 VIS_THRESHOLD = 0.5
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
@@ -70,10 +70,10 @@ REP_MIN_DISTANCE   = 50    #min no of frames between detected repetitions to pre
 
 #Here, we define landmark indices that we require. Depending on the side landmark indices are called. 
 SIDE_LANDMARK_INDICES = {
-    "right": dict(hip=24, shoulder=12, elbow=14, wrist=16, nose = 0, heel = 30),
-    "left":  dict(hip=23, shoulder=11, elbow=13, wrist=15, nose = 0, heel = 29),
+    "right": dict(hip=24, shoulder=12, elbow=14, wrist=16, eye = 5, heel = 30),
+    "left":  dict(hip=23, shoulder=11, elbow=13, wrist=15, eye = 2, heel = 29),
 }
-JOINTS = ["hip", "shoulder", "elbow", "wrist", "nose", "heel"]
+JOINTS = ["hip", "shoulder", "elbow", "wrist", "eye", "heel"]
 
 print("SIDE_LANDMARKS set up successfully")
 
@@ -103,14 +103,24 @@ def _visible(df, vis_cols, threshold=VIS_THRESHOLD):
         return pd.Series(True, index=df.index)
     return (df[cols] >= threshold).all(axis=1)
 
-def compute_pixels_per_cm(lm_df, patient_height_cm):
-    ok = (lm_df["nose_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
+def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15):
+    ok = (lm_df["eye_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
     if ok.sum() == 0:
-        raise ValueError("No frames with visible nose and heel; cannot calibrate")
-    span_px = np.median(np.hypot(
-        lm_df.loc[ok, "nose_x"] - lm_df.loc[ok, "heel_x"],
-        lm_df.loc[ok, "nose_y"] - lm_df.loc[ok, "heel_y"]))
-    return float(span_px / (patient_height_cm - NOSE_TO_VERTEX_CM))
+        raise ValueError("No frames with visible eye and heel; cannot calibrate")
+    span = np.hypot(lm_df["eye_x"] - lm_df["heel_x"], lm_df["eye_y"] - lm_df["heel_y"])
+    whole = float(span[ok].median())
+    first = ok & (lm_df.index < int(calib_s * fps))
+    if first.sum() >= min_frames:
+        init = float(span[first].median())
+        if abs(init / whole - 1) > 0.05:
+            print(f"WARNING: initial span differs {abs(init/whole-1)*100:.0f}% from " f"whole video; person may have moved toward/away from camera")
+        chosen = init
+    else:
+        chosen = whole
+    ref_cm = height_cm * (1 - EYE_TO_VERTEX_FRAC)
+    px_per_cm = chosen / ref_cm
+    print(f"  px_per_cm = {px_per_cm:.2f}")
+    return px_per_cm
 
 def _shoulder_elevation(shoulder_xy, hip_xy, px_per_cm):
     return float(np.linalg.norm(shoulder_xy - hip_xy) / px_per_cm)
@@ -680,9 +690,9 @@ def compute_rep_features(angle_df, rep, states, patient_id, baseline: float, fps
 
     #How far the arm actually raised from its own starting position
     # his is the ROM achieved, expressed in degrees of shoulder movement
-    row["shoulder_rom"] = (
-        row["S3_shoulder_max"] - row["S1_shoulder_mean"]
-    )
+    row["shoulder_rom"] = row["S3_shoulder_max"] #Changed the formula for shoulder rom from S3_max - S1_min. since most of the patients move into extension while lowering their hand back down, giving a negative min angle
+    #for state 1. Therefore, the min angle instead of being subtracted from the max angle of s3, it gets added to it. Thereby, giving inflated angles. To avoid this we consider 0 degrees as the neutral point.
+    row["extension_at_bottom"] = -min(row["S1_shoulder_min"], 0) #The minus sign is added to avoid getting a negative result. 
 
     #How much trunk lean developed beyond the patient's own resting posture
     #A kyphotic patient starts with higher trunk_angle - expressing change from S1 means we measure ADDITIONAL lean caused by compensation, not the lean that was already there at rest
@@ -765,7 +775,7 @@ def process_video(video_path, patient_id, side="right", output_csv=None, visuali
     for j in JOINTS:
         lm_df[f"{j}_x"] *= W
         lm_df[f"{j}_y"] *= H
-    px_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm)
+    px_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm, fps)
 
     print("[3/6] Calculating angles")
     angle_df  = calculate_angles(lm_df, side, px_per_cm)
