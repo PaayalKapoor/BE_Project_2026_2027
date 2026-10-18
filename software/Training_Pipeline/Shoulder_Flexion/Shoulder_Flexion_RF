@@ -79,7 +79,7 @@ def train_binary_model_rf(df, target_label, other_label_1, other_label_2, other_
                               "recall": recall, "f1": f1})
 
     metrics_df = pd.DataFrame(fold_metrics)
-    print(f"\n{target_label} (Logistic Regression) - mean/std across folds:")
+    print(f"\n{target_label} (Random Forest) - mean/std across folds:")
     print(metrics_df.drop(columns="fold").agg(["mean", "std"]))
     #Train on the entire dataset
     final_scaler = StandardScaler()
