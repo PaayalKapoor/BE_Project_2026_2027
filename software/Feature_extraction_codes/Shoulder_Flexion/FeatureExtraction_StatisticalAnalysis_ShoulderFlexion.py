@@ -46,11 +46,11 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Sayalee_SHF_L_1.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Gauri_SHF_R_5.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID = "Sayalee_SHF_L_1"
-SIDE = "left"   #Here we provide the side that is facing the camera 
-PATIENT_HEIGHT_CM = 164
+PATIENT_ID = "Gauri_SHF_R_5"
+SIDE = "right"   #Here we provide the side that is facing the camera 
+PATIENT_HEIGHT_CM = 155
 EYE_TO_VERTEX_FRAC = 0.065
 VIS_THRESHOLD = 0.5
 #The savitzky golay filter does not work on live stream videos since it requires a window of previous, current and future data points to estimate the middle smoothed value. 
@@ -103,11 +103,23 @@ def _visible(df, vis_cols, threshold=VIS_THRESHOLD):
         return pd.Series(True, index=df.index)
     return (df[cols] >= threshold).all(axis=1)
 
-def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15):
+def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15, video_path=VIDEO_PATH):
     ok = (lm_df["eye_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
     if ok.sum() == 0:
         raise ValueError("No frames with visible eye and heel; cannot calibrate")
-    span = np.hypot(lm_df["eye_x"] - lm_df["heel_x"], lm_df["eye_y"] - lm_df["heel_y"])
+    cap = cv2.VideoCapture(video_path) #Here we open the video that needs to be processed 
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {video_path}")
+    
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
+    print(frame_height)
+    print(frame_width)
+    
+    x_coord = (lm_df["eye_x"] - lm_df["heel_x"])
+    y_coord = (lm_df["eye_y"] - lm_df["heel_y"])
+    span = np.hypot(x_coord, y_coord)
+    print(span)
     whole = float(span[ok].median())
     first = ok & (lm_df.index < int(calib_s * fps))
     if first.sum() >= min_frames:
@@ -243,7 +255,7 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                             "shoulder": "SHO",
                             "elbow":    "ELB",
                             "wrist":    "WRI",
-                            "nose": "NOS", 
+                            "eye": "EYE", 
                             "heel": "HEL"
                         }
                         #lm_indices is a dictionary that stores the mapping between the joint names and their corresponding MediaPipe landmark indices.
