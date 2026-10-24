@@ -227,29 +227,31 @@ def extract_landmarks(video_path: str, side: str = "right", visualize: bool = Fa
                         left_arm = [[11, 13], [13, 15]]
                         right_arm = [[12, 14], [14, 16]]
                         torso = [[11, 23], [12, 24]]
+                        hip = [23, 24]
 
-                        if side=="right":
-                           pixel_ra1_s = [int(lms[right_arm[0][0]].x*display_width), int(lms[right_arm[0][0]].y*display_height)]
-                           pixel_ra1_e = [int(lms[right_arm[0][1]].x*display_width), int(lms[right_arm[0][1]].y*display_height)]
-                           pixel_ra2_s = [int(lms[right_arm[1][0]].x*display_width), int(lms[right_arm[1][0]].y*display_height)]
-                           pixel_ra2_e = [int(lms[right_arm[1][1]].x*display_width), int(lms[right_arm[1][1]].y*display_height)]
-                           pixel_tr_s = [int(lms[torso[0][0]].x*display_width), int(lms[torso[0][0]].y*display_height)]
-                           pixel_tr_e = [int(lms[torso[0][1]].x*display_width), int(lms[torso[0][1]].y*display_height)]
-                           cv2.line(vis_frame, pixel_ra1_s, pixel_ra1_e, (150, 150, 150), 2)
-                           cv2.line(vis_frame, pixel_ra2_s, pixel_ra2_e, (150, 150, 150), 2)
-                           cv2.line(vis_frame, pixel_tr_s, pixel_tr_e, (150, 150, 150), 2)
-
-
-                        if side=="left":
-                           pixel_la1_s = [int(lms[left_arm[0][0]].x*display_width), int(lms[left_arm[0][0]].y*display_height)]
-                           pixel_la1_e = [int(lms[left_arm[0][1]].x*display_width), int(lms[left_arm[0][1]].y*display_height)]
-                           pixel_la2_s = [int(lms[left_arm[1][0]].x*display_width), int(lms[left_arm[1][0]].y*display_height)]
-                           pixel_la2_e = [int(lms[left_arm[1][1]].x*display_width), int(lms[left_arm[1][1]].y*display_height)]
-                           pixel_tl_s = [int(lms[torso[1][0]].x*display_width), int(lms[torso[1][0]].y*display_height)]
-                           pixel_tl_e = [int(lms[torso[1][1]].x*display_width), int(lms[torso[1][1]].y*display_height)]
-                           cv2.line(vis_frame, pixel_la1_s, pixel_la1_e, (150, 150, 150), 2)
-                           cv2.line(vis_frame, pixel_la2_s, pixel_la2_e, (150, 150, 150), 2)
-                           cv2.line(vis_frame, pixel_tl_s, pixel_tl_e, (150, 150, 150), 2)
+                        
+                        pixel_ra1_s = [int(lms[right_arm[0][0]].x*display_width), int(lms[right_arm[0][0]].y*display_height)]
+                        pixel_ra1_e = [int(lms[right_arm[0][1]].x*display_width), int(lms[right_arm[0][1]].y*display_height)]
+                        pixel_ra2_s = [int(lms[right_arm[1][0]].x*display_width), int(lms[right_arm[1][0]].y*display_height)]
+                        pixel_ra2_e = [int(lms[right_arm[1][1]].x*display_width), int(lms[right_arm[1][1]].y*display_height)]
+                        pixel_tr_s = [int(lms[torso[0][0]].x*display_width), int(lms[torso[0][0]].y*display_height)]
+                        pixel_tr_e = [int(lms[torso[0][1]].x*display_width), int(lms[torso[0][1]].y*display_height)]
+                        pixel_hip_s = [int(lms[hip[0]].x*display_width), int(lms[hip[0]].y*display_height)]
+                        pixel_hip_e = [int(lms[hip[1]].x*display_width), int(lms[hip[1]].y*display_height)]
+                        pixel_la1_s = [int(lms[left_arm[0][0]].x*display_width), int(lms[left_arm[0][0]].y*display_height)]
+                        pixel_la1_e = [int(lms[left_arm[0][1]].x*display_width), int(lms[left_arm[0][1]].y*display_height)]
+                        pixel_la2_s = [int(lms[left_arm[1][0]].x*display_width), int(lms[left_arm[1][0]].y*display_height)]
+                        pixel_la2_e = [int(lms[left_arm[1][1]].x*display_width), int(lms[left_arm[1][1]].y*display_height)]
+                        pixel_tl_s = [int(lms[torso[1][0]].x*display_width), int(lms[torso[1][0]].y*display_height)]
+                        pixel_tl_e = [int(lms[torso[1][1]].x*display_width), int(lms[torso[1][1]].y*display_height)]
+                        cv2.line(vis_frame, pixel_ra1_s, pixel_ra1_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_ra1_s, pixel_la1_s, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_ra2_s, pixel_ra2_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_hip_s, pixel_hip_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_tr_s, pixel_tr_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_la1_s, pixel_la1_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_la2_s, pixel_la2_e, (150, 150, 150), 2)
+                        cv2.line(vis_frame, pixel_tl_s, pixel_tl_e, (150, 150, 150), 2)
 
                         #Draw key joints
                         joint_labels = {
