@@ -9,7 +9,7 @@ import joblib
 
 #Since the dataset is very imbalanced. 153 heel lift reps, 19 velocity reps and 220 correct reps - the model will not be able to learn the velocity error 
 #and generalise on new data. Therefore, we split the multiclass model into two binary classification models
-df = pd.read_csv(r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Dataset for Exercises - Shoulder_flexion_1.csv")
+df = pd.read_csv(r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Shoulder_Flexion\Dataset for Exercises - Copy of Shoulder_flexion_1.csv")
 metadata = ['patient_id', 'rep_id', 'start_frame', 'end_frame', 'peak_frame']
 drop = ['S1_shoulder_mean', 'S1_elbow_mean', 'S1_trunk_mean', 'S1_sho_height_mean', 'S1_wrist_gap_mean', 'S1_velocity_mean', 'S1_acceleration_mean',
         'S2_shoulder_mean', 'S2_elbow_mean', 'S2_trunk_mean', 'S2_sho_height_mean', 'S2_wrist_gap_mean', 'S2_velocity_mean', 'S2_acceleration_mean',

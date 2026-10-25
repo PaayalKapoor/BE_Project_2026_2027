@@ -9,7 +9,7 @@ import joblib
 
 recall_weighted_scorer = make_scorer(fbeta_score, beta=2, zero_division = 0) #fbeta is used to find a harmonic mean between recall and precision. The weight depends on the beta value. 
 #if beta = 1, both, precision and recall are given the same weightage. beta > 1 provides more weightage to recall (since missed positive cases are a greater concern). beta < 1 provides more weightage to precision.
-df = pd.read_csv(r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Dataset for Exercises - Shoulder_flexion_1.csv")
+df = pd.read_csv(r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Shoulder_Flexion\Dataset for Exercises - Copy of Shoulder_flexion_1.csv")
 metadata = ['patient_id', 'rep_id', 'start_frame', 'end_frame', 'peak_frame']
 drop = ['S1_shoulder_mean', 'S1_elbow_mean', 'S1_trunk_mean', 'S1_sho_height_mean', 'S1_wrist_gap_mean', 'S1_velocity_mean', 'S1_acceleration_mean',
         'S2_shoulder_mean', 'S2_elbow_mean', 'S2_trunk_mean', 'S2_sho_height_mean', 'S2_wrist_gap_mean', 'S2_velocity_mean', 'S2_acceleration_mean',

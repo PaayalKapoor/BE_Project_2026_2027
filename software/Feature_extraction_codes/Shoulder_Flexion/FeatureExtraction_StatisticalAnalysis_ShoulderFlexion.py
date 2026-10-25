@@ -46,9 +46,9 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Gauri_SHF_R_5.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Gauri_SHF_R_4.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID = "Gauri_SHF_R_5"
+PATIENT_ID = "Gauri_SHF_R"
 SIDE = "right"   #Here we provide the side that is facing the camera 
 PATIENT_HEIGHT_CM = 155
 EYE_TO_VERTEX_FRAC = 0.065
@@ -820,7 +820,7 @@ def process_video(video_path, patient_id, side="right", output_csv=None, visuali
               + "  ".join(f"S{k}={int((states==k).sum())}f" for k in range(1, 5)))
 
     result_df = pd.DataFrame(all_rows)
-
+    plot_rep_debug(smooth_df, reps, shoulder)
     if output_csv:
         if os.path.isfile(output_csv):
             existing = pd.read_csv(output_csv, usecols=["patient_id"])
@@ -838,12 +838,12 @@ def plot_rep_debug(smooth_df, reps, shoulder):
     STATE_COLORS = {1: "steelblue", 2: "orange", 3: "tomato",    4: "mediumseagreen"}
     STATE_NAMES = {1: "S1 Resting",   2: "S2 Lifting", 3: "S3 Peak",      4: "S4 Lowering"}
 
-    fig, axes = plt.subplots(5, 1, figsize=(14, 10), sharex=True)
+    fig, axes = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
     frames = smooth_df.index.values
 
     for ax, col, label in zip(axes,
-        ["shoulder_angle", "elbow_angle", "trunk_angle", "shoulder_height", "wrist_elbow_gap"],
-        ["Shoulder (°)", "Elbow (°)", "Trunk lean (°)", "Shoulder height (norm)", "Wrist-elbow gap (norm)"]):
+        ["shoulder_angle", "elbow_angle"],
+        ["Shoulder (°)", "Elbow (°)"]):
         ax.plot(frames, smooth_df[col].values, lw=1.5, color="navy")
         ax.set_ylabel(label, fontsize=9)
         ax.grid(True, alpha=0.3)
@@ -864,7 +864,7 @@ def plot_rep_debug(smooth_df, reps, shoulder):
     patches = [mpatches.Patch(color=c, label=n, alpha=0.5) for s, (c, n) in enumerate(zip(STATE_COLORS.values(), STATE_NAMES.values()), 1)]
     axes[0].legend(handles=patches, fontsize=8, loc="upper right")
     axes[0].set_title("Shoulder angle with rep states", fontsize=10)
-    axes[4].set_xlabel("Frame")
+    axes[1].set_xlabel("Frame")
 
     plt.tight_layout()
     plt.savefig("shoulder_flexion_debug.png", dpi=150)
