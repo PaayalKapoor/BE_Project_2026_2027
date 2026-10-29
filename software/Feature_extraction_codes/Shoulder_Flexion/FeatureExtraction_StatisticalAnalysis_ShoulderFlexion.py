@@ -131,7 +131,7 @@ def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15, vid
         chosen = whole
     ref_cm = height_cm * (1 - EYE_TO_VERTEX_FRAC)
     px_per_cm = chosen / ref_cm
-    print(f"  px_per_cm = {px_per_cm:.2f}")
+    print(f"px_per_cm = {px_per_cm:.2f}")
     return px_per_cm
 
 def _shoulder_elevation(shoulder_xy, hip_xy, px_per_cm):

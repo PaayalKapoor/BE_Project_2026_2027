@@ -40,11 +40,11 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Paayal_SHS_R_2.mp4" #Path to the input video that needs to be analyzed
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L.mp4" #Path to the input video that needs to be analyzed
 OUTPUT_CSV = r"docs/supine_heel_slides_pixelsnormalized.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Paayal_SHS_R_2" #Unique patient ID
-SIDE = "right"   #The leg that faces the camera
-PATIENT_HEIGHT_CM = 165
+PATIENT_ID = "Gauri_SHS_L" #Unique patient ID
+SIDE = "left"   #The leg that faces the camera
+PATIENT_HEIGHT_CM = 155
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -59,7 +59,7 @@ SMOOTH_POLY = 3 #Fit a cubic polynomial through those 11 points. It uses somethi
 #Rep detection
 REP_MIN_PROMINENCE = 15 #Only bends greater than 15 degrees will be counted as valid reps. 175 degree -> 168 degree. Thats only 7 degrees (very small movement) and hence it wont be counted as a valid rep
 REP_MIN_DISTANCE = 20 #min no of frames between detected repetitions to prevent false detections. For example - if the tracking angle is noisy it will lead to false rep detections.
-NOSE_TO_VERTEX_CM = 11.0
+EYE_TO_VERTEX_FRAC = 0.065
 #Used to divide each rep into states. The code determines these states based on the knee angle range of a repetition.
 """ How it works - Suppose one rep has max angle = 180 (fully extended)
 and min angle = 100 (knee bent)
@@ -75,44 +75,57 @@ Therefore, 100 - 112 degree is classified as S3. Everything between 112 - 168 is
 STATE_BOUNDARY_FRAC = 0.15
 
 SIDE_LANDMARK_INDICES = {
-    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32, heel=30, nose=0),
-    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31, heel=29, nose=0),
+    "right": dict(shoulder=12, hip=24, knee=26, ankle=28, foot=32, heel=30, eye=5),
+    "left":  dict(shoulder=11, hip=23, knee=25, ankle=27, foot=31, heel=29, eye=2),
 }
+JOINTS = ["shoulder", "hip", "knee", "ankle", "foot", "heel", "eye"]
 
 print("SIDE_LANDMARKS set up successfully")
 
-def compute_pixels_per_cm(smooth_df: pd.DataFrame, reps: list[dict], states_by_rep: dict, patient_height_cm: float, frame_width, frame_height) -> float:
+def compute_angular_velocity(smooth_df: pd.DataFrame, fps: float) -> np.ndarray:
     """
-    Calibrate pixels-per-cm from pooled S1 (near-extension) frames, where
-    the body is closest to fully collinear and least affected by knee-flexion
-    foreshortening. Uses nose-to-heel pixel span against corrected standing height.
+    First derivative of the smoothed knee angle, in degrees/second.
+    Negative during flexion (angle decreasing), positive during extension.
+    Uses the SAME savgol window as position smoothing — differentiating an
+    already-smoothed signal, not the raw jittery one, to avoid amplifying noise.
     """
-    if patient_height_cm is None or np.isnan(patient_height_cm):
-        return np.nan
+    dt = 1.0 / fps
+    velocity = savgol_filter(
+        smooth_df["knee_angle"].values,
+        SMOOTH_WINDOW, SMOOTH_POLY,
+        deriv=1, delta=dt
+    )
+    return velocity
 
-    spans = []
-    for rep in reps:
-        start, end = rep["start_frame"], rep["end_frame"]
-        states = states_by_rep[rep["rep_id"]]
-        rep_df = smooth_df.loc[start:end].copy()
-        rep_df["state"] = states
-
-        valid = _visible(rep_df, ["nose_vis", "heel_vis"])
-        s1_frames = rep_df[(rep_df["state"] == 1) & valid]
-
-        for _, r in s1_frames.iterrows():
-            dx = (r["nose_x"] - r["heel_x"]) * frame_width
-            dy = (r["nose_y"] - r["heel_y"]) * frame_height
-            spans.append(np.sqrt(dx**2 + dy**2))
-
-    if len(spans) == 0:
-        print("  WARNING: no clean S1 frames for pixels_per_cm calibration")
-        return np.nan
-
-    reference_pixel_span = float(np.median(spans))   # now TRUE pixels
-    reference_cm_length = patient_height_cm - NOSE_TO_VERTEX_CM
-    pixels_per_cm = reference_pixel_span / reference_cm_length
-    return pixels_per_cm
+def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15, video_path=VIDEO_PATH):
+    ok = (lm_df["eye_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
+    if ok.sum() == 0:
+        raise ValueError("No frames with visible eye and heel; cannot calibrate")
+    cap = cv2.VideoCapture(video_path) #Here we open the video that needs to be processed 
+    if not cap.isOpened():
+        raise FileNotFoundError(f"Cannot open video: {video_path}")
+    
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) #Width of the frame that is extracted from the metadata of the video
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) #Height of the frame that is extracted from the metadata of the video
+    print(frame_height)
+    print(frame_width)
+    
+    x_coord = (lm_df["eye_x"] - lm_df["heel_x"])
+    y_coord = (lm_df["eye_y"] - lm_df["heel_y"])
+    span = np.hypot(x_coord, y_coord)
+    print(span)
+    whole = float(span[ok].median())
+    first = ok & (lm_df.index < int(calib_s * fps))
+    if first.sum() >= min_frames:
+        init = float(span[first].median())
+        if abs(init / whole - 1) > 0.05:
+            print(f"WARNING: initial span differs {abs(init/whole-1)*100:.0f}% from " f"whole video; person may have moved toward/away from camera")
+        chosen = init
+    else:
+        chosen = whole
+    ref_cm = height_cm * (1 - EYE_TO_VERTEX_FRAC)
+    px_per_cm = chosen / ref_cm
+    print(f"px_per_cm = {px_per_cm:.2f}")
 
 def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160, deviation_threshold=0.04, window=5):
     #This function takes a data frame (lm_df) which stores the landmark coordinates and visibility scores. Each frame is one row of data.
@@ -458,7 +471,6 @@ Methods: read(), isOpened(), release(), get()"""
     df.attrs["frame_height"] = frame_height
     
     detection_rate = df["detected"].mean() * 100 #The detected column of the data frame contains T or F. T = 1, F = 0. Example: [1, 1, 0, 0, 1], we then take the mean of these values and multiply that by 100 to get the detection rate.
-    #Change this line in extract_landmarks():
     print(f"  {frame_idx} frames | raw MediaPipe detection rate: {detection_rate:.1f}%")
     if detection_rate < 70:
         print("  WARNING: low detection rate — check video angle / lighting")
@@ -477,25 +489,25 @@ def _angle_3pt(a: np.ndarray, b: np.ndarray, c: np.ndarray) -> float: #Here we c
     return float(np.degrees(np.arccos(np.clip(cos_val, -1.0, 1.0))))
 
 #Trunk lean basically measures how much the torso leans forward
-def _pelvic_lift(hip_xy: np.ndarray, shoulder_xy: np.ndarray) -> float:
-    """
-    Hip-to-shoulder vertical gap, normalized by torso length (the
-    shoulder-hip distance in this same frame). Dividing by torso length
-    cancels out camera distance — a patient closer to the camera and
-    a patient further away will produce comparable values for the same
-    physical lift, since both the gap and the torso length scale together.
+# def _pelvic_lift(hip_xy: np.ndarray, shoulder_xy: np.ndarray) -> float:
+#     """
+#     Hip-to-shoulder vertical gap, normalized by torso length (the
+#     shoulder-hip distance in this same frame). Dividing by torso length
+#     cancels out camera distance — a patient closer to the camera and
+#     a patient further away will produce comparable values for the same
+#     physical lift, since both the gap and the torso length scale together.
 
-    This also has a useful side effect: it roughly normalizes for
-    differences in patient body size too, not just camera distance.
-    """
-    gap          = hip_xy[1] - shoulder_xy[1]
-    torso_length = np.linalg.norm(hip_xy - shoulder_xy) + 1e-8
-    return float(gap / torso_length) #We divide by the torso length so that the value of the pelvic gap that we receive is normalized and is not dependent of the size of the patient in the frame.
-    """ The pelvic gap requires normalization since it varies depending on the distance of the camera it is recorded from. If the camera is close a real gap of 2 cm might take up 10 pixels but if the camera is farther,
-      the same gap might take up only 3 pixels although the lift is the same. The actual joint positions(in case of calculation of angles) in the real world have not changed. Only the pixel numbers changed.
-      Instead of just measuring the lift in pixels, you also measure something else in the same frame that you know doesnt change - like the lenth of the torso.  Because both numbers shrink or grow together by the same amount, dividing one by the
-      other cancels out the camera distance completely. This is called normalization and is already being performed while calculating the angles.
-      """
+#     This also has a useful side effect: it roughly normalizes for
+#     differences in patient body size too, not just camera distance.
+#     """
+#     gap          = hip_xy[1] - shoulder_xy[1]
+#     torso_length = np.linalg.norm(hip_xy - shoulder_xy) + 1e-8
+#     return float(gap / torso_length) #We divide by the torso length so that the value of the pelvic gap that we receive is normalized and is not dependent of the size of the patient in the frame.
+#     """ The pelvic gap requires normalization since it varies depending on the distance of the camera it is recorded from. If the camera is close a real gap of 2 cm might take up 10 pixels but if the camera is farther,
+#       the same gap might take up only 3 pixels although the lift is the same. The actual joint positions(in case of calculation of angles) in the real world have not changed. Only the pixel numbers changed.
+#       Instead of just measuring the lift in pixels, you also measure something else in the same frame that you know doesnt change - like the lenth of the torso.  Because both numbers shrink or grow together by the same amount, dividing one by the
+#       other cancels out the camera distance completely. This is called normalization and is already being performed while calculating the angles.
+#       """
 #This function actually calculates the angles
 def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe that contains the landmark coordinates
     rows = [] #Create an empty array that will later store the calculated angles
@@ -515,19 +527,19 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
             "knee_angle": _angle_3pt(hip, knee, ankle),
             "hip_angle": _angle_3pt(shoulder, hip, knee),
             "ankle_angle": _angle_3pt(knee, ankle, foot),
-            "pelvic_gap": _pelvic_lift(hip, shoulder),
+            #"pelvic_gap": _pelvic_lift(hip, shoulder),
             "hip_vis": r["hip_vis"],
             "knee_vis": r["knee_vis_effective"],
             "ankle_vis": r["ankle_vis_effective"],
             "shoulder_vis": r["shoulder_vis"],
             "heel_x": heel[0],
             "heel_y": heel[1],
-            "torso_length": torso_length,
+            #"torso_length": torso_length,
             "heel_vis": r["heel_vis_effective"],
             "foot_vis":r["foot_vis_effective"],
-            "nose_x": r["nose_x"],
-            "nose_y": r["nose_y"],
-            "nose_vis": r["nose_vis"]
+            "eye_x": r["eye_x"],
+            "eye_y": r["eye_y"],
+            "eye_vis": r["eye_vis"]
         })
 
     return pd.DataFrame(rows).set_index("frame") #Set the frame as the index of the row
@@ -654,16 +666,16 @@ def assign_states(
 
 """Feature Extraction"""
 
-ANGLE_COLS   = ["knee_angle", "hip_angle", "ankle_angle",  "pelvic_gap", "heel_y"] #An array is defined that stores the 4 main angles
-ANGLE_LABELS = ["knee", "hip", "ankle", "pelvic", "heel"] #Stores the labels
+ANGLE_COLS   = ["knee_angle", "hip_angle", "ankle_angle", "heel_y", "knee_velocity"] #An array is defined that stores the 4 main angles
+ANGLE_LABELS = ["knee", "hip", "ankle", "heel", "velocity"] #Stores the labels
 N_STATES     = 4 #The number of states per repetition
 VIS_THRESHOLD = 0.5
 VIS_COLS = {
     "knee_angle": ["hip_vis", "knee_vis", "ankle_vis"],
     "hip_angle": ["shoulder_vis", "hip_vis", "knee_vis"],
     "ankle_angle": ["knee_vis", "ankle_vis", "foot_vis"],
-    "pelvic_gap":  ["hip_vis", "shoulder_vis"], 
-    "heel_y": ["heel_vis"]       
+    "heel_y": ["heel_vis"],
+    "knee_velocity": ["knee_vis", "hip_vis", "ankle_vis"]
 } #A visibility threshold is added to ensure that only frames that have a visibility above the given thresholds for the key joints required would be considered and the frames with lower
 #visibility will be rejected.
 
@@ -836,9 +848,8 @@ def process_video(
     #extracts joints coordinates (x&y) and stores it in a dataframe - lm_df
     print("\n[1/7] Extracting landmarks")
     lm_df = extract_landmarks(video_path, side, visualize=False)
-
-    frame_width = lm_df.attrs.get("frame_width")
-    frame_height = lm_df.attrs.get("frame_height")
+    fps = lm_df.attrs["fps"]
+    W, H = lm_df.attrs["frame_width"], lm_df.attrs["frame_height"]
 
     #This step is added since when the leg is being flexed - the foot landmark starts jittering so instead of taking noisy landmarks in the savgol filter which would further disrupt calculations
     #we simply reject those frame where visibility is low. This function then interpolates the nosiy values with the neighboring values instead of using noisy data points. 
@@ -847,6 +858,10 @@ def process_video(
 
     print("[3/7] Smoothing landmarks")         
     lm_df_smooth = smooth_landmarks(lm_df)
+    for j in JOINTS:
+        lm_df_smooth[f"{j}_x"] *= W
+        lm_df_smooth[f"{j}_y"] *= H
+    px_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm, fps)
 
     #2. Angles. Here we actually calculate the angles using raw joint coordinates.
     print("[4/7] Calculating joint angles")
@@ -857,6 +872,7 @@ def process_video(
     #3. Smooth. Here smoothing of the angles is performed using the savitzky golay filter
     print("[5/7] Smoothing")
     smooth_df = smooth_angles(angle_df)
+    smooth_df["knee_velocity"] = compute_angular_velocity(smooth_df, fps)
 
     #4. Reps. Reps are detected based on a tracking angle. In case of supine heel slides, the tracking angle is the knee angle since it has the highest
     #range or movement
@@ -872,6 +888,9 @@ def process_video(
     #First pass: compute states for every rep (needed before we can pool S1 frames)
     patient_height_cm = PATIENT_HEIGHT_CM
 
+    print("Plotting: ")
+    plot_rep_debug(smooth_df, reps, knee)
+
     states_by_rep = {}
     for rep in reps:
         states_by_rep[rep["rep_id"]] = assign_states(
@@ -879,7 +898,7 @@ def process_video(
     )
 
     video_baseline = compute_video_baseline(smooth_df, reps, states_by_rep)
-    video_pixels_per_cm = compute_pixels_per_cm(smooth_df, reps, states_by_rep, patient_height_cm, frame_width, frame_height)
+    
 
     all_rows = []
 
@@ -889,7 +908,7 @@ def process_video(
         valley = rep["valley_frame"]
 
         states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
-        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, video_pixels_per_cm, frame_height) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
+        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, px_per_cm, H) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
@@ -995,16 +1014,24 @@ if __name__ == "__main__":
 
 import matplotlib.pyplot as plt
 
-#To construct a graph of knee angle vs frames we need to extract the landmarks, calculate angles, smooth the angles and then extract the smoothed out knee angle values which are then used in the graph for plotting.
-lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=False)
-lm_df = gate_low_visibility(lm_df)
-angle_df = calculate_angles(lm_df)
-smooth = smooth_angles(angle_df)
-knee = smooth["knee_angle"].values
+# #To construct a graph of knee angle vs frames we need to extract the landmarks, calculate angles, smooth the angles and then extract the smoothed out knee angle values which are then used in the graph for plotting.
+# lm_df = extract_landmarks(VIDEO_PATH, SIDE, visualize=False)
+# lm_df = gate_low_visibility(lm_df)
+# angle_df = calculate_angles(lm_df)
+# smooth = smooth_angles(angle_df)
+# knee = smooth["knee_angle"].values
 
 plt.figure(figsize=(14, 4))
 plt.plot(knee)
 plt.title("Knee angle over time") #We do this to make sure how many valleys are present. Number of valleys = Number of reps
+plt.xlabel("Frame")
+plt.ylabel("Degrees")
+plt.grid(alpha=0.3)
+plt.show()
+
+plt.figure(figsize=(14, 4))
+plt.plot(angle_df["knee_angle"])
+plt.title("Raw Data")
 plt.xlabel("Frame")
 plt.ylabel("Degrees")
 plt.grid(alpha=0.3)
