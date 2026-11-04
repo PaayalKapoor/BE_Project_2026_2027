@@ -22,6 +22,7 @@ import numpy as np
 import pandas as pd
 import urllib.request
 import os
+import math
 
 MODEL_PATH = "pose_landmarker_heavy.task"
 MODEL_URL  = (
@@ -40,11 +41,11 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_L.mp4" #Path to the input video that needs to be analyzed
-OUTPUT_CSV = r"docs/supine_heel_slides_pixelsnormalized.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Gauri_SHS_L" #Unique patient ID
-SIDE = "left"   #The leg that faces the camera
-PATIENT_HEIGHT_CM = 155
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Paayal_SHS_R_2.mp4" #Path to the input video that needs to be analyzed
+OUTPUT_CSV = r"docs/Datasets/Supine_Heel_Slides/supine_heel_slides_final.csv" #The output file that will be created to store the extracted features
+PATIENT_ID = "Paayal_SHS_R_2" #Unique patient ID
+SIDE = "right"   #The leg that faces the camera
+PATIENT_HEIGHT_CM = 165
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
@@ -97,8 +98,8 @@ def compute_angular_velocity(smooth_df: pd.DataFrame, fps: float) -> np.ndarray:
     )
     return velocity
 
-def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15, video_path=VIDEO_PATH):
-    ok = (lm_df["eye_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD)
+def compute_pixels_per_cm(lm_df, height_cm, fps, knee, calib_s=2.0, video_path=VIDEO_PATH):
+    ok = ((lm_df["eye_vis"] >= VIS_THRESHOLD) & (lm_df["heel_vis"] >= VIS_THRESHOLD) & (knee>=170))
     if ok.sum() == 0:
         raise ValueError("No frames with visible eye and heel; cannot calibrate")
     cap = cv2.VideoCapture(video_path) #Here we open the video that needs to be processed 
@@ -116,16 +117,17 @@ def compute_pixels_per_cm(lm_df, height_cm, fps, calib_s=2.0, min_frames=15, vid
     print(span)
     whole = float(span[ok].median())
     first = ok & (lm_df.index < int(calib_s * fps))
-    if first.sum() >= min_frames:
-        init = float(span[first].median())
-        if abs(init / whole - 1) > 0.05:
-            print(f"WARNING: initial span differs {abs(init/whole-1)*100:.0f}% from " f"whole video; person may have moved toward/away from camera")
-        chosen = init
-    else:
-        chosen = whole
+    # if first.sum() >= min_frames:
+    #     init = float(span[first].median())
+    #     if abs(init / whole - 1) > 0.05:
+    #         print(f"WARNING: initial span differs {abs(init/whole-1)*100:.0f}% from " f"whole video; person may have moved toward/away from camera")
+    #     chosen = init
+    # else:
+    chosen = whole
     ref_cm = height_cm * (1 - EYE_TO_VERTEX_FRAC)
     px_per_cm = chosen / ref_cm
     print(f"px_per_cm = {px_per_cm:.2f}")
+    return px_per_cm
 
 def gate_low_visibility(lm_df, vis_threshold=0.5, extension_angle_threshold=160, deviation_threshold=0.04, window=5):
     #This function takes a data frame (lm_df) which stores the landmark coordinates and visibility scores. Each frame is one row of data.
@@ -186,7 +188,7 @@ def print_video_statistics(angle_df: pd.DataFrame):
         "knee_angle": "Knee angle",
         "hip_angle": "Hip angle",
         "ankle_angle": "Ankle angle",
-        "pelvic_gap": "Pelvic gap",
+        "knee_velocity": "Knee Velocity",
         "heel_y": "Heel lift"
     }
 
@@ -391,7 +393,7 @@ Methods: read(), isOpened(), release(), get()"""
                             "ankle" : "ANK", 
                             "foot" : "FOOT", 
                             "heel": "HEEL", 
-                            "nose": "NOSE"
+                            "eye": "EYE"
                         }
                         for joint, idx in lm_indices.items():
                             lm = lms[idx]
@@ -549,7 +551,7 @@ def calculate_angles(lm_df: pd.DataFrame) -> pd.DataFrame: #lm_df is a dataframe
 #This function takes the raw angles that were calculated and smooths them using the savitzky golay filter
 def smooth_angles(angle_df: pd.DataFrame) -> pd.DataFrame:
     out = angle_df.copy()
-    for col in ["knee_angle", "hip_angle", "ankle_angle", "pelvic_gap", "heel_y"]:
+    for col in ["knee_angle", "hip_angle", "ankle_angle", "heel_y"]:
         out[col] = savgol_filter(angle_df[col].values, SMOOTH_WINDOW, SMOOTH_POLY)
     return out
 
@@ -729,8 +731,8 @@ def compute_rep_features(
     states: np.ndarray,
     patient_id: str,
     baseline: float,
-    pixels_per_cm: float=np.nan,
-    frame_height: float = np.nan
+    pixels_per_cm: float,
+    frame_height: float
 ) -> dict:
     """
     Compute per-state stats for a single rep.
@@ -791,9 +793,9 @@ def compute_rep_features(
             row[f"S{s}_heel_range"] = np.nan
         else:
             row[f"S{s}_heel_range"] = float(max(0.0, baseline - gated_heel.min()))
-    row["pelvic_lift_max"] = row["S1_pelvic_mean"] - np.nanmin([
-        row["S2_pelvic_min"], row["S3_pelvic_min"], row["S4_pelvic_min"]
-    ])
+    # row["pelvic_lift_max"] = row["S1_pelvic_mean"] - np.nanmin([
+    #     row["S2_pelvic_min"], row["S3_pelvic_min"], row["S4_pelvic_min"]
+    # ])
     #df.loc[row_indexer, column_indexer]
     valid = _visible(rep_angle_df, ["heel_vis"])
     valid_heel = rep_angle_df.loc[valid, "heel_y"]
@@ -812,17 +814,17 @@ def compute_rep_features(
     row["hip_compensation"] = row["S3_hip_mean"] - row["S1_hip_mean"]
     row["S2_S4_speed_ratio"] = row["S2_duration"] / (row["S4_duration"] + 1e-8)
 
-    if not np.isnan(pixels_per_cm) and not np.isnan(row["heel_lift_max"]):
-        row["heel_lift_max_cm"] = (row["heel_lift_max"] * frame_height) / pixels_per_cm
-        row["heel_lift_mean_cm"] = (row["heel_lift_mean"] * frame_height) / pixels_per_cm
+    if not math.isnan(pixels_per_cm) and not np.isnan(row["heel_lift_max"]):
+        row["heel_lift_max_cm"] = (row["heel_lift_max"]) / pixels_per_cm
+        row["heel_lift_mean_cm"] = (row["heel_lift_mean"]) / pixels_per_cm
     else:
         row["heel_lift_max_cm"] = np.nan
         row["heel_lift_mean_cm"] = np.nan
 
-    if not np.isnan(pixels_per_cm) and not np.isnan(row["pelvic_lift_max"]):
-        row["pelvic_lift_max_cm"] = row["pelvic_lift_max"] / pixels_per_cm
-    else:
-        row["pelvic_lift_max_cm"] = np.nan
+    # if not np.isnan(pixels_per_cm) and not np.isnan(row["pelvic_lift_max"]):
+    #     row["pelvic_lift_max_cm"] = row["pelvic_lift_max"] / pixels_per_cm
+    # else:
+    #     row["pelvic_lift_max_cm"] = np.nan
 
     return row
 """Main Pipeline"""
@@ -834,7 +836,8 @@ def process_video(
     video_path: str,
     patient_id: str,
     side: str = "right", #The default side is set to right
-    output_csv: str = None
+    output_csv: str = None, 
+    patient_height_cm = PATIENT_HEIGHT_CM
 ) -> pd.DataFrame:
     """
     Full pipeline: video → one-row-per-rep feature DataFrame.
@@ -848,7 +851,7 @@ def process_video(
     #extracts joints coordinates (x&y) and stores it in a dataframe - lm_df
     print("\n[1/7] Extracting landmarks")
     lm_df = extract_landmarks(video_path, side, visualize=False)
-    fps = lm_df.attrs["fps"]
+    fps = lm_df.attrs.get("fps", 30.0)
     W, H = lm_df.attrs["frame_width"], lm_df.attrs["frame_height"]
 
     #This step is added since when the leg is being flexed - the foot landmark starts jittering so instead of taking noisy landmarks in the savgol filter which would further disrupt calculations
@@ -857,15 +860,14 @@ def process_video(
     lm_df = gate_low_visibility(lm_df) 
 
     print("[3/7] Smoothing landmarks")         
-    lm_df_smooth = smooth_landmarks(lm_df)
+    lm_df = smooth_landmarks(lm_df)
     for j in JOINTS:
-        lm_df_smooth[f"{j}_x"] *= W
-        lm_df_smooth[f"{j}_y"] *= H
-    px_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm, fps)
+        lm_df[f"{j}_x"] *= W
+        lm_df[f"{j}_y"] *= H
 
     #2. Angles. Here we actually calculate the angles using raw joint coordinates.
     print("[4/7] Calculating joint angles")
-    angle_df = calculate_angles(lm_df_smooth)
+    angle_df = calculate_angles(lm_df)
 
     print_video_statistics(angle_df)
 
@@ -908,7 +910,9 @@ def process_video(
         valley = rep["valley_frame"]
 
         states = assign_states(knee, start, valley, end) #Output: states = [1,1,1,2,2,3,3,4,4]. States are assigned each frame of a rep
-        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, px_per_cm, H) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
+        pixel_per_cm = compute_pixels_per_cm(lm_df, patient_height_cm, fps, knee)
+        print("-----", pixel_per_cm)
+        row = compute_rep_features(smooth_df, rep, states, patient_id, video_baseline, pixel_per_cm, H) #This function calculates the statistical values like mean, min, max, range and standard deviation, along with the
         #pelvic lift for each state. Returns one dictionary which is appended to all_rows
         all_rows.append(row)
 
@@ -958,13 +962,13 @@ def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray):
     STATE_NAMES  = {1: "S1 Extended", 2: "S2 Descending",
                     3: "S3 Peak Flex", 4: "S4 Ascending"}
 
-    fig, axes = plt.subplots(4, 1, figsize=(14, 8), sharex=True) #Create a figure with 4 rows and 1 column. axes[0] stores the first graph, axes[1] stores the second graph
+    fig, axes = plt.subplots(3, 1, figsize=(14, 8), sharex=True) #Create a figure with 4 rows and 1 column. axes[0] stores the first graph, axes[1] stores the second graph
     #and axes[3] stores the 3rd graph. size of the figure is 14 inches in width and 8 inches in height. x axis (frame number) is same for all 4 graphs
     frames = smooth_df.index.values
 
     for ax, col, label in zip(axes,
-                               ["knee_angle", "hip_angle", "ankle_angle", "pelvic_gap"],
-                               ["Knee (°)", "Hip (°)", "Ankle (°)", "Pelvic Gap (norm)"]):
+                               ["knee_angle", "hip_angle", "ankle_angle"],
+                               ["Knee (°)", "Hip (°)", "Ankle (°)"]):
         ax.plot(frames, smooth_df[col].values, lw=1.5, color="navy") #Here we draw a line graph
         ax.set_ylabel(label, fontsize=9) #y label is the label of the column
         ax.grid(True, alpha=0.3) #Add grid. Adds faint background lines alpha=0.3 means transparency
@@ -991,7 +995,7 @@ def plot_rep_debug(smooth_df: pd.DataFrame, reps: list[dict], knee: np.ndarray):
                    zip(STATE_COLORS.values(), STATE_NAMES.values()), 1)] #state colors and state names are paired
     axes[0].legend(handles=patches, fontsize=8, loc="upper right") #Legend is added to the top right corner
     axes[0].set_title("Knee angle with rep states", fontsize=10) #title is provided to the graph
-    axes[3].set_xlabel("Frame") #x label is set
+    axes[2].set_xlabel("Frame") #x label is set
 
     plt.tight_layout() #Prevents the overlapping of labels. Without this the titles may overlap
     plt.savefig("rep_debug.png", dpi=150)
