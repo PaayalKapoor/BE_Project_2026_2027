@@ -9,13 +9,13 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 #like in the case for our velocity based model. AdaBoost's reweighting rule doesn't distinguish between "this example is a genuinely hard-but-real pattern the model needs to learn" and "this example is mislabeled, an outlier, or noisy.
 #" It only sees: this example was misclassified last round → increase its weight → force the next learner to prioritize it. If the model starts prioritizing nosiy labels it will learn wrong patterns and hence skew the model. 
 
-df = pd.read_csv(r'C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Supine_Heel_Slides\supine_heel_slides_velocity.csv')
+df = pd.read_csv(r'C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\docs\Datasets\Supine_Heel_Slides\supine_final.csv')
 metadata = ['patient_id', 'rep_id', 'start_frame', 'end_frame', 'valley_frame']
 
 drop = ['S1_knee_mean', 'S1_knee_std', 'S1_hip_mean', 'S1_hip_std', 'S1_ankle_mean', 'S1_ankle_std', 'S1_pelvic_mean', 'S1_pelvic_std', 'S1_heel_mean', 'S1_heel_std', 'S1_velocity_mean', 'S1_velocity_std',
-        'S2_knee_mean', 'S2_knee_std', 'S2_hip_mean', 'S2_hip_std', 'S2_ankle_mean', 'S2_ankle_std', 'S2_pelvic_mean', 'S2_pelvic_std', 'S2_heel_mean', 'S2_heel_std', 'S2_velocity_mean', 'S2_velocity_std',
+        'S2_knee_mean', 'S2_knee_std', 'S2_hip_mean', 'S2_hip_std', 'S2_ankle_mean', 'S2_ankle_std', 'S2_pelvic_mean', 'S2_pelvic_std',  'S2_heel_std', 'S2_velocity_mean', 'S2_velocity_std',
         'S3_knee_mean', 'S3_knee_std', 'S3_hip_mean', 'S3_hip_std', 'S3_ankle_mean', 'S3_ankle_std', 'S3_pelvic_mean', 'S3_pelvic_std', 'S3_heel_mean', 'S3_heel_std', 'S3_velocity_mean', 'S3_velocity_std',
-        'S4_knee_mean', 'S4_knee_std', 'S4_hip_mean', 'S4_hip_std', 'S4_ankle_mean', 'S4_ankle_std', 'S4_pelvic_mean', 'S4_pelvic_std', 'S4_heel_mean', 'S4_heel_std', 'S4_velocity_mean', 'S4_velocity_std',
+        'S4_knee_mean', 'S4_knee_std', 'S4_hip_mean', 'S4_hip_std', 'S4_ankle_mean', 'S4_ankle_std', 'S4_pelvic_mean', 'S4_pelvic_std',  'S4_heel_std', 'S4_velocity_mean', 'S4_velocity_std',
         'pelvic_lift_max', 'hip_compensation', 'S2_S4_speed_ratio', 'S1_pelvic_min', 'S1_pelvic_max', 'S1_pelvic_range', 'S1_pelvic_vis_frames', 'S2_pelvic_vis_frames', 
         'S3_pelvic_vis_frames', 'S4_pelvic_vis_frames', 'S2_pelvic_min', 'S2_pelvic_max', 'S2_pelvic_range', 'S3_pelvic_min', 'S3_pelvic_max', 'S3_pelvic_range', 'S4_pelvic_min', 
         'S4_pelvic_max', 'S4_pelvic_range', 'S1_ankle_vis_frames', 'S1_ankle_mean', 'S1_ankle_min', 'S1_ankle_max', 'S1_ankle_range', 'S1_ankle_std', 'S2_ankle_vis_frames', 

@@ -41,11 +41,11 @@ def download_model():
 
 download_model()
 
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Paayal_SHS_R_2.mp4" #Path to the input video that needs to be analyzed
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Supine_Heel_Slides\Gauri_SHS_R.mp4" #Path to the input video that needs to be analyzed
 OUTPUT_CSV = r"docs/Datasets/Supine_Heel_Slides/supine_heel_slides_final.csv" #The output file that will be created to store the extracted features
-PATIENT_ID = "Paayal_SHS_R_2" #Unique patient ID
+PATIENT_ID = "Patient_195_SHS_R" #Unique patient ID
 SIDE = "right"   #The leg that faces the camera
-PATIENT_HEIGHT_CM = 165
+PATIENT_HEIGHT_CM = 155
 
 #Smoothing. The angles are smoothed using the savitzky golay filter. This filter basically preserves the peaks and valleys in the data. For example - moving average takes the previous, current and future reading which is averaged.
 #The problem with the moving average filter is that it ends up disturbing the overall shape of the signal, eg - 180, 150, 180 here 150 will be averaged to 170. Therefore moving averages tend to flatten peaks and valleys.
