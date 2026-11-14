@@ -7,9 +7,10 @@ trainer_labels.csv columns:  video,start_s,end_s,label,errors[,arm]
   label  : correct | incorrect
   errors : ';'-separated codes (blank if correct), e.g.
            squat : LEAN_FORWARD, TOO_DEEP, HIP_FLEXION, ANKLE_MOBILITY, KNEES_FORWARD,
-                   HIPS_BACK, WEIGHT_BACK, SHALLOW
+                   HIPS_BACK, WEIGHT_BACK, HEEL_LIFT, SHALLOW
            lunge : LEAN_FORWARD, KNEES_FORWARD, BACK_KNEE_HIGH, BACK_KNEE_LOW, TOO_DEEP, SHALLOW
            raise : ELBOW_BENT, TOO_HIGH, NOT_HIGH_ENOUGH, UNEVEN_RAISE
+           momentum/swing: FAST_DESCENT, BOUNCE, TORSO_SWING (squat); FAST_LIFT, FAST_LOWER, TORSO_SWING (raise)
            (any exercise: OTHER for faults the system does not check)
   arm    : only for lateral raises. left | right | both  (both = same label for both arms;
            split into two rows if the arms differ). Left/right = the PERSON's left/right.
@@ -86,6 +87,7 @@ def main():
     else:
         pred["key"], trn["key"] = pred["v"], trn["v"]
 
+    mcols = [c for c in pred.columns if c.startswith("m_")]     # tuning metrics written by the analyzers
     matched, n_fp, n_fn = [], 0, 0
     for v in sorted(trn["key"].unique()):               # only videos (and arms) the trainer annotated
         p, t = pred[pred.key == v], trn[trn.key == v]
@@ -96,7 +98,8 @@ def main():
                             "trainer_start": t.loc[j, "start_s"], "trainer_end": t.loc[j, "end_s"],
                             "iou": round(s, 2),
                             "sys_label": p.loc[i, "label"], "trainer_label": t.loc[j, "label"],
-                            "sys_errors": p.loc[i, "errors"], "trainer_errors": t.loc[j, "errors"]})
+                            "sys_errors": p.loc[i, "errors"], "trainer_errors": t.loc[j, "errors"],
+                            **{c: p.loc[i, c] for c in mcols}})
     m = pd.DataFrame(matched)
     if m.empty:
         raise SystemExit("No reps matched - check video names and timestamps (seconds).")
@@ -133,6 +136,21 @@ def main():
             ctp, cfp, cfn = int((s & t).sum()), int((s & ~t).sum()), int((~s & t).sum())
             cp, cr, cf = prf(ctp, cfp, cfn)
             print(f"  {c:<16}{ctp:>4}{cfp:>4}{cfn:>4}{cp:>7.2f}{cr:>7.2f}{cf:>7.2f}")
+
+    # --- threshold tuning: metrics of the system's reps, grouped by what the TRAINER said (groups may overlap)
+    mcols = [c for c in m.columns if c.startswith("m_")]
+    if mcols:
+        num = m[mcols].apply(pd.to_numeric, errors="coerce")
+        families = {"momentum error": {"FAST_DESCENT", "BOUNCE", "TORSO_SWING", "FAST_LIFT", "FAST_LOWER"},
+                    "HEEL_LIFT": {"HEEL_LIFT"}}
+        masks = {"trainer: correct": m.trainer_label == "correct"}
+        for name, codes in families.items():
+            masks[f"trainer: {name}"] = m.trainer_errors.map(lambda x, c=codes: bool(errset(x) & c))
+        masks = {k: v for k, v in masks.items() if v.sum()}
+        summary = pd.DataFrame({k: num[v].median() for k, v in masks.items()}).T.round(3)
+        summary.insert(0, "n", [int(v.sum()) for v in masks.values()])
+        print("\nTUNING METRICS - median per trainer group (set each threshold between 'correct' and the error row)")
+        print(summary.to_string())
 
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     m.to_csv(a.out, index=False)

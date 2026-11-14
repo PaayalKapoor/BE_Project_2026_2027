@@ -16,6 +16,7 @@ import csv
 import glob
 import os
 import urllib.request
+from collections import deque
 
 import cv2
 import numpy as np
@@ -44,10 +45,20 @@ REST_EXIT = 25         # ...below this = back at rest (rep ends); gap avoids cha
 TOP_MIN = 85           # must reach this to be a full rep
 TOP_MAX = 100          # above this = raised too high
 PARTIAL_MIN_PEAK = 55  # a rise that never exceeds this is ignored (just a wobble)
-ELBOW_MIN = 150        # elbow angle below this = elbow bent
+ELBOW_MIN = 160        # elbow angle below this = elbow bent
 ELBOW_CHECK_MIN = 40   # only judge the elbow once the arm is clearly raised
 SYM_MAX_DIFF = 15      # left/right shoulder-angle difference allowed
-ERR_MIN_FRAMES = 5     # an error must persist this many frames to flag the rep (1 = flag instantly)
+ERR_MIN_FRAMES = 5     # an error must persist this many CONSECUTIVE frames to flag the rep (1 = flag instantly)
+
+# ---- momentum / swing detection.  These numbers are PLACEHOLDERS: tune them on your own videos
+# ---- (the m_* columns in the reps CSV are there for exactly that - see compare_labels.py)
+VEL_ERR_MIN_FRAMES = 3  # velocity-based errors need fewer consecutive frames: the velocity is already averaged over VEL_WINDOW_S
+VEL_WINDOW_S = 0.2     # velocities are measured over this many seconds (less noise, independent of fps)
+FAST_LIFT_VEL = 150    # deg/s: shoulder angle rising faster than this   -> FAST_LIFT  (jerked up with momentum)
+FAST_LOWER_VEL = 150   # deg/s: shoulder angle falling faster than this  -> FAST_LOWER (dropped, not controlled)
+TORSO_SWING_VEL = 30   # deg/s: side-to-side torso tilt changing faster than this -> TORSO_SWING (body English)
+VEL_MSG = {"FAST_LIFT": "TOO FAST - control the lift", "FAST_LOWER": "TOO FAST - control the lowering",
+           "TORSO_SWING": "BODY SWING - keep torso still"}
 ALPHA = 0.3            # smoothing weight of previous value
 VIS_MIN = 0.5
 
@@ -59,9 +70,10 @@ summary_close_flag = False
 summary_close_rect = (220, 200, 330, 245)
 
 REP_FIELDS = ["video", "rep_id", "arm", "start_s", "end_s", "label", "errors",
-              "peak_angle", "min_elbow_angle", "reached_top"]
-FRAME_FIELDS = ["frame", "time_s", "detected", "l_shoulder", "l_elbow", "l_state", "l_errors",
-                "r_shoulder", "r_elbow", "r_state", "r_errors", "sym_diff"]
+              "peak_angle", "min_elbow_angle", "reached_top",
+              "m_peak_lift_vel", "m_peak_lower_vel", "m_peak_torso_vel", "m_lift_s", "m_lower_s"]   # m_* = tuning metrics
+FRAME_FIELDS = ["frame", "time_s", "detected", "l_shoulder", "l_elbow", "l_state", "l_errors", "l_vel",
+                "r_shoulder", "r_elbow", "r_state", "r_errors", "r_vel", "sym_diff", "torso_tilt", "torso_vel"]
 
 COLORS = {
     "good": (0, 220, 120), "bad": (0, 80, 220), "warning": (0, 165, 255),
@@ -72,7 +84,7 @@ FONT_SM = cv2.FONT_HERSHEY_SIMPLEX
 PANEL_W, PANEL_H = 230, 345
 
 
-# ----------------------------------------------------------------- model
+
 def download_model():
     if os.path.exists(MODEL_PATH):
         print(f"Model already present: {MODEL_PATH}")
@@ -82,7 +94,7 @@ def download_model():
     print("Done.")
 
 
-# ----------------------------------------------------------------- math
+
 def calculate_angle(a, b, c):
     """Angle at b (degrees). Pass PIXEL coordinates: normalised x/y distort angles on non-square frames."""
     a, b, c = np.array(a, float), np.array(b, float), np.array(c, float)
@@ -100,18 +112,44 @@ def arm_angles(lm, side, w, h):
     return calculate_angle(px[0], px[1], px[2]), calculate_angle(px[1], px[2], px[3]), pts
 
 
-# ----------------------------------------------------------------- rep counter
+class Velocity:
+    """Rate of change (units per second) over a sliding TIME window, so it does not depend on fps."""
+    def __init__(self, window_s):
+        self.window_s = window_s
+        self.hist = deque()
+
+    def reset(self):
+        self.hist.clear()
+
+    def update(self, t, value):
+        self.hist.append((t, value))
+        while len(self.hist) > 2 and t - self.hist[1][0] >= self.window_s:
+            self.hist.popleft()
+        (t0, v0), (t1, v1) = self.hist[0], self.hist[-1]
+        dt = t1 - t0
+        return (v1 - v0) / dt if dt >= 0.5 * self.window_s else 0.0
+
+
+def torso_tilt(lm, w, h):
+    """Side-to-side tilt of the shoulder-midpoint vs hip-midpoint, degrees from vertical (front view)."""
+    pts = [lm[i] for i in (L_SHOULDER, R_SHOULDER, L_HIP, R_HIP)]
+    if min(p.visibility for p in pts) < VIS_MIN:
+        return None
+    sx, sy = (pts[0].x + pts[1].x) / 2 * w, (pts[0].y + pts[1].y) / 2 * h
+    hx, hy = (pts[2].x + pts[3].x) / 2 * w, (pts[2].y + pts[3].y) / 2 * h
+    return float(np.degrees(np.arctan2(sx - hx, hy - sy)))
+
 class RepCounter:
     """
     One per arm.  DOWN -> RISING -> UP -> LOWERING -> DOWN.
     A rep ATTEMPT runs from leaving rest to returning to rest.  Reps that never reach TOP_MIN are
-    logged as NOT_HIGH_ENOUGH instead of being silently dropped (the old version counted a rep the
-    moment the arm hit 85 deg, whatever happened afterwards, and ignored partial reps entirely).
+    logged as NOT_HIGH_ENOUGH instead of being silently dropped.  An error flags the rep only if it
+    fires on ERR_MIN_FRAMES CONSECUTIVE frames.
     """
     def __init__(self, side):
         self.side = side
         self.state = "DOWN"
-        self.reps = 0               # reps with no flagged error
+        self.reps = 0              
         self.attempts = 0
         self.records = []
         self.last_flash = -99.0
@@ -120,24 +158,35 @@ class RepCounter:
 
     def _clear(self):
         self.start_t = 0.0
-        self.peak = 0.0
+        self.peak, self.peak_t = 0.0, 0.0
         self.min_elbow = 999.0
-        self.err_counts = {}
+        self.peak_up = self.peak_down = self.peak_torso = 0.0
+        self.err_streak, self.err_max = {}, {}
 
     def flashing(self, t):
         return t - self.last_flash < 0.8
 
-    def update(self, angle, elbow, sym_bad, t, video_name):
+    def break_streaks(self):
+        """Arm not visible this frame: nothing can be 'consecutive' across the gap."""
+        self.err_streak.clear()
+        return []
+
+    def update(self, angle, elbow, sym_bad, t, video_name, vel=0.0, torso_swing=False, torso_vel=0.0):
         """Feed one frame. Returns the error codes firing on this frame."""
         if angle is None:
-            return []
+            return self.break_streaks()
         if self.state == "DOWN":
             if angle <= REST_ENTER:
                 return []
             self._clear()
             self.state, self.start_t = "RISING", t
 
-        self.peak = max(self.peak, angle)
+        if angle > self.peak:
+            self.peak, self.peak_t = angle, t
+        self.peak_up = max(self.peak_up, vel)
+        self.peak_down = max(self.peak_down, -vel)
+        self.peak_torso = max(self.peak_torso, abs(torso_vel))
+
         frame_errs = []
         if elbow is not None and angle >= ELBOW_CHECK_MIN:
             self.min_elbow = min(self.min_elbow, elbow)
@@ -147,8 +196,19 @@ class RepCounter:
             frame_errs.append("TOO_HIGH")
         if sym_bad:
             frame_errs.append("UNEVEN_RAISE")
-        for c in frame_errs:
-            self.err_counts[c] = self.err_counts.get(c, 0) + 1
+        if vel > FAST_LIFT_VEL:
+            frame_errs.append("FAST_LIFT")
+        if vel < -FAST_LOWER_VEL:
+            frame_errs.append("FAST_LOWER")
+        if torso_swing:
+            frame_errs.append("TORSO_SWING")
+
+        for code in list(self.err_streak):               
+            if code not in frame_errs:
+                self.err_streak[code] = 0
+        for code in frame_errs:
+            self.err_streak[code] = self.err_streak.get(code, 0) + 1
+            self.err_max[code] = max(self.err_max.get(code, 0), self.err_streak[code])
 
         if self.state == "RISING" and angle >= TOP_MIN:
             self.state = "UP"
@@ -166,7 +226,7 @@ class RepCounter:
         reached = self.peak >= TOP_MIN
         if not reached and self.peak < PARTIAL_MIN_PEAK:
             return                                          # wobble, not a rep attempt
-        errs = sorted(c for c, n in self.err_counts.items() if n >= ERR_MIN_FRAMES)
+        errs = sorted(c for c, n in self.err_max.items() if n >= (VEL_ERR_MIN_FRAMES if c in VEL_MSG else ERR_MIN_FRAMES))
         if not reached:
             errs = ["NOT_HIGH_ENOUGH"]
         self.attempts += 1
@@ -180,10 +240,12 @@ class RepCounter:
             "label": "incorrect" if errs else "correct", "errors": ";".join(errs),
             "peak_angle": round(self.peak, 1),
             "min_elbow_angle": round(self.min_elbow, 1) if self.min_elbow < 999 else "",
-            "reached_top": int(reached)})
+            "reached_top": int(reached),
+            "m_peak_lift_vel": round(self.peak_up, 1), "m_peak_lower_vel": round(self.peak_down, 1),
+            "m_peak_torso_vel": round(self.peak_torso, 1),
+            "m_lift_s": round(self.peak_t - self.start_t, 2), "m_lower_s": round(t - self.peak_t, 2)})
 
 
-# ----------------------------------------------------------------- UI helpers
 def get_stop_button_rect(frame):
     h, w = frame.shape[:2]
     x2, y2 = w - 15, h - 15
@@ -234,13 +296,13 @@ def present(img, show):
     """Show a frame, handle keys. Returns True if the user wants to quit."""
     if not show:
         return False
-    stop_button_rect[:] = get_stop_button_rect(img)    # in-place so the mouse callback sees it
+    stop_button_rect[:] = get_stop_button_rect(img)   
     draw_stop_button(img)
     cv2.imshow(window_name, img)
     key = cv2.waitKey(1) & 0xFF
     if key in (ord('q'), 27):
         return True
-    if key == ord(' '):                                  # space = pause / resume
+    if key == ord(' '):                                  
         while not stop_flag:
             k = cv2.waitKey(50) & 0xFF
             if k == ord(' '):
@@ -274,9 +336,6 @@ def show_summary(left, right):
     cv2.destroyWindow(summary_window_name)
 
 
-# ----------------------------------------------------------------- drawing helpers
-# NB: cv2 Hershey fonts only render plain ASCII - the old unicode arrows / ticks / degree signs
-# were drawn as "?" so everything below is ASCII.
 def draw_rounded_rect_overlay(img, x1, y1, x2, y2, radius, color, alpha=0.65):
     overlay = img.copy()
     cv2.rectangle(overlay, (x1 + radius, y1), (x2 - radius, y2), color, -1)
@@ -344,7 +403,7 @@ def draw_side_panel(img, x0, y0, side, counter, sh_ang, el_ang, wrist_y, shoulde
         put_text_shadow(img, "REP!", (px + pw // 2 - 30, py + ph - 14), FONT, 0.85, (0, 255, 255), 2)
 
 
-# ----------------------------------------------------------------- main processing
+
 def process_video(video_path, show=True, out_dir="outputs_raise"):
     global stop_flag
     stop_flag = False
@@ -372,12 +431,13 @@ def process_video(video_path, show=True, out_dir="outputs_raise"):
 
     counters = {"LEFT": RepCounter("LEFT"), "RIGHT": RepCounter("RIGHT")}
     smooth = {"LEFT": None, "RIGHT": None}
-    left_panel_arm = "RIGHT"        # video is not mirrored: the person's LEFT arm is on the image's right
+    vtr = {"LEFT": Velocity(VEL_WINDOW_S), "RIGHT": Velocity(VEL_WINDOW_S)}   #shoulder-angle velocity per arm
+    tv, tilt_prev = Velocity(VEL_WINDOW_S), None                               #torso-tilt velocity
+    left_panel_arm = "RIGHT"        
     frame_rows = []
     frame_idx = 0
 
-    # NO cv2.flip here: flipping before pose estimation swaps MediaPipe's left/right labels,
-    # which would make "left arm" in your CSV mean the person's right arm.
+    
     with vision.PoseLandmarker.create_from_options(options) as detector:
         while True:
             ret, frame = cap.read()
@@ -395,22 +455,40 @@ def process_video(video_path, show=True, out_dir="outputs_raise"):
 
             disp = fit(frame)
             dh, dw = disp.shape[:2]
-            arm = {"LEFT": None, "RIGHT": None}       # smoothed (shoulder_ang, elbow_ang, landmarks)
+            arm = {"LEFT": None, "RIGHT": None}       #smoothed (shoulder_ang, elbow_ang, landmarks)
+            arm_vel = {"LEFT": 0.0, "RIGHT": 0.0}
+            tilt, tilt_vel = None, 0.0
 
             if results.pose_landmarks:
                 lm = results.pose_landmarks[0]
                 left_panel_arm = "LEFT" if lm[L_SHOULDER].x < lm[R_SHOULDER].x else "RIGHT"
+                raw_tilt = torso_tilt(lm, w, h)
+                if raw_tilt is None:
+                    tv.reset()
+                    tilt_prev = None
+                else:
+                    tilt = raw_tilt if tilt_prev is None else ALPHA * tilt_prev + (1 - ALPHA) * raw_tilt
+                    tilt_prev = tilt
+                    tilt_vel = tv.update(t_s, tilt)
                 for side in ("LEFT", "RIGHT"):
                     got = arm_angles(lm, side, w, h)
                     if got is None:
+                        vtr[side].reset()
                         continue
                     raw = got[:2]
                     if smooth[side] is None:
                         smooth[side] = raw
                     smooth[side] = tuple(ALPHA * p + (1 - ALPHA) * r for p, r in zip(smooth[side], raw))
                     arm[side] = (smooth[side][0], smooth[side][1], got[2])
+                    arm_vel[side] = vtr[side].update(t_s, smooth[side][0])
 
-            # ---- symmetry (only when both arms are off rest, so a one-arm exercise isn't flagged)
+            else:
+                tv.reset()
+                tilt_prev = None
+                for v in vtr.values():
+                    v.reset()
+
+            #symmetry (only when both arms are off rest, so a one-arm exercise isn't flagged)
             a_l, a_r = arm["LEFT"], arm["RIGHT"]
             sym_diff, sym_ok, sym_bad = None, True, False
             if a_l and a_r:
@@ -418,21 +496,28 @@ def process_video(video_path, show=True, out_dir="outputs_raise"):
                 sym_ok = sym_diff < SYM_MAX_DIFF
                 sym_bad = (not sym_ok) and min(a_l[0], a_r[0]) > REST_ENTER
 
-            # ---- rep counters + logging
+            torso_swing = abs(tilt_vel) > TORSO_SWING_VEL
+            fired = set()                                 #error codes firing on THIS frame (for the on-screen banner)
+
+            #rep counters + logging
             row = {"frame": this_frame, "time_s": round(t_s, 3), "detected": int(bool(results.pose_landmarks)),
-                   "sym_diff": "" if sym_diff is None else round(sym_diff, 1)}
+                   "sym_diff": "" if sym_diff is None else round(sym_diff, 1),
+                   "torso_tilt": "" if tilt is None else round(tilt, 1), "torso_vel": round(tilt_vel, 1)}
             for side, key in (("LEFT", "l"), ("RIGHT", "r")):
                 a = arm[side]
                 c = counters[side]
-                errs = c.update(a[0], a[1], sym_bad, t_s, video_name) if a else []
+                errs = (c.update(a[0], a[1], sym_bad, t_s, video_name, vel=arm_vel[side],
+                                 torso_swing=torso_swing, torso_vel=tilt_vel) if a else c.break_streaks())
+                fired.update(errs)
+                row[f"{key}_vel"] = "" if not a else round(arm_vel[side], 1)
                 row[f"{key}_shoulder"] = "" if not a else round(a[0], 1)
                 row[f"{key}_elbow"] = "" if not a else round(a[1], 1)
                 row[f"{key}_state"] = c.state
                 row[f"{key}_errors"] = ";".join(errs)
             frame_rows.append(row)
 
-            # ---- drawing (all on the resized frame; panels live on a canvas beside the video so
-            #      they never cover the person, even for portrait phone videos)
+            #drawing (all on the resized frame; panels live on a canvas beside the video so
+            #they never cover the person, even for portrait phone videos)
             for side in ("LEFT", "RIGHT"):
                 a = arm[side]
                 if not a:
@@ -460,6 +545,12 @@ def process_video(video_path, show=True, out_dir="outputs_raise"):
                 bx, by = max(dw // 2 - 140, 10), dh - 70
                 draw_rounded_rect_overlay(disp, bx - 8, by - 24, bx + 290, by + 10, 6, (0, 40, 100), 0.80)
                 put_text_shadow(disp, "! UNEVEN RAISE - check symmetry", (bx, by), FONT_SM, 0.55, COLORS["bad"], 1)
+            for code in ("TORSO_SWING", "FAST_LIFT", "FAST_LOWER"):
+                if code in fired:
+                    bx, by = max(dw // 2 - 140, 10), dh - 115
+                    draw_rounded_rect_overlay(disp, bx - 8, by - 24, bx + 290, by + 10, 6, (0, 40, 100), 0.80)
+                    put_text_shadow(disp, "! " + VEL_MSG[code], (bx, by), FONT_SM, 0.55, COLORS["warning"], 1)
+                    break
 
             canvas = np.full((max(dh, PANEL_H + 20), dw + 2 * PANEL_W, 3), COLORS["bg"], np.uint8)
             canvas[:dh, PANEL_W:PANEL_W + dw] = disp
