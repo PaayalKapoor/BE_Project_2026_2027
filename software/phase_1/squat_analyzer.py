@@ -30,7 +30,7 @@ MODEL_URL = (
     "pose_landmarker/pose_landmarker_heavy/float16/latest/"
     "pose_landmarker_heavy.task"
 )
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Squats\Participant_107_SQ_L.mp4"
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Squats\Participant_110_SQ_R.mp4"
 
 # Tasks API has no PoseLandmark enum (mp_pose / options.PoseLandmark don't exist) -> use indices
 LEFT_SHOULDER, RIGHT_SHOULDER = 11, 12
@@ -41,7 +41,7 @@ LEFT_HEEL, RIGHT_HEEL = 29, 30
 LEFT_FOOT_INDEX, RIGHT_FOOT_INDEX = 31, 32
 BOTTOM_KNEE = 100        # knee angle below this = bottom phase (S3); a rep that never gets below it is SHALLOW
 DEPTH_TARGET_KNEE = 80   # lowest knee angle must reach this; above it (up to 100) -> SQUAT_DEEPER
-STAND_KNEE = 165        # knee angle above this = standing
+STAND_KNEE = 155        # knee angle above this = standing
 PARTIAL_MIN_KNEE = 130  # a rep that never goes below this is ignored (just a wobble)
 ALPHA = 0.3             # smoothing weight of previous value
 VIS_MIN = 0.6
@@ -59,12 +59,13 @@ VEL_MSG = {"FAST_DESCENT": "Too Fast - Control The Descent",
            "TORSO_SWING": "Avoid Swinging - Stay Controlled"}
 
 # ---- heel lift: heel rising above its flat-foot position for ERR_MIN_FRAMES consecutive frames
+TOE_LIFT_RATIO = 0.08    # toe rise relative to the heel, as a fraction of shank length -> TOE_LIFT   (PLACEHOLDER - tune it)
 HEEL_LIFT_RATIO = 0.10   # rise as a fraction of shank (knee-ankle) length -> HEEL_LIFT   (PLACEHOLDER - tune it)
 HEEL_BASE_FRAMES = 30    # standing frames used to find where the flat heel sits (~1 s at 30 fps)
 HEEL_BASE_MIN_FRAMES = 5 # need at least this many standing frames, otherwise fall back (see heel block)
-ALERT_MSG = {**VEL_MSG, "HEEL_LIFT": "Keep Your Heels Down"}
-LIVE_PRIORITY = ["HEEL_LIFT", "LEAN_FORWARD", "FAST_DESCENT", "TORSO_SWING"]
-LIVE_MSG = {"HEEL_LIFT": "Keep Your Heels Down", "LEAN_FORWARD": "Lean Less Forward",
+ALERT_MSG = {**VEL_MSG, "HEEL_LIFT": "Keep Your Heels Down", "TOE_LIFT": "Keep Your Toes Down"}
+LIVE_PRIORITY = ["HEEL_LIFT", "TOE_LIFT", "LEAN_FORWARD", "FAST_DESCENT", "TORSO_SWING"]
+LIVE_MSG = {"HEEL_LIFT": "Keep Your Heels Down", "TOE_LIFT": "Keep Your Toes Down", "LEAN_FORWARD": "Lean Less Forward",
             "FAST_DESCENT": "Too Fast - Control The Descent", "TORSO_SWING": "Avoid Swinging - Stay Controlled"}
 
 # ---- pose-rule thresholds (S3 / bottom phase).  Angles are camera-independent; the knee-over-toe distance is
@@ -83,7 +84,7 @@ HIPS_BACK_MAX, WEIGHT_BACK_MAX = 90, 100           # legacy rules, OFF by defaul
 # TOO_DEEP is OFF (depth only matters when the spine rounds).  BUTT_WINK is implemented but OFF until you have
 # checked m_bottom_lean_shift against the trainer notes and tuned BUTT_WINK_SHIFT - then add "BUTT_WINK" here.
 ENABLED_ERRORS = {"LEAN_FORWARD", "FAST_DESCENT", "TORSO_SWING",
-                  "BOUNCE", "HEEL_LIFT", "SHALLOW", "SQUAT_DEEPER"}
+                  "BOUNCE", "HEEL_LIFT", "TOE_LIFT", "SHALLOW", "SQUAT_DEEPER"}
 # Flagged and written to the CSV, but does NOT turn a rep "incorrect" (e.g. {"KNEES_FORWARD"} while tuning).
 ADVISORY_ERRORS = set()
 
@@ -96,10 +97,10 @@ summary_close_rect = (200, 130, 310, 175)
 
 REP_FIELDS = ["video", "rep_id", "start_s", "end_s", "label", "errors", "accuracy_pct", "reached_depth",
               "m_peak_descent_vel", "m_peak_ascent_vel", "m_peak_back_vel", "m_bounce_in", "m_bounce_out",
-              "m_descent_s", "m_ascent_s", "m_heel_lift_max", "m_knee_toe_max",
+              "m_descent_s", "m_ascent_s", "m_heel_lift_max","m_toe_lift_max", "m_knee_toe_max",
               "m_bottom_lean_shift", "m_bottom_hip_shift"]          # m_* = metrics for tuning thresholds
 FRAME_FIELDS = ["frame", "time_s", "detected", "state", "feedback", "errors", "knee", "hip", "back", "ankle",
-                "knee_vel", "back_vel", "heel_rise"]
+                "knee_vel", "back_vel", "heel_rise", "toe_rise"]
 
 
 # ----------------------------------------------------------------- model
@@ -302,7 +303,12 @@ def draw_panel(canvas, x0, info):
     else:
         put_plain(canvas, f"Heel rise: {hr:.2f}  (limit {HEEL_LIFT_RATIO:.2f})", (x, 522), 0.6,
                         C_RED if hr > HEEL_LIFT_RATIO else C_WHITE)
-
+    tr = info["toe_rise"]
+    if tr is None:
+        put_plain(canvas, "Toe rise: --", (x, 550), 0.6, C_WHITE)
+    else:
+        put_plain(canvas, f"Toe rise: {tr:.2f}  (limit {TOE_LIFT_RATIO:.2f})", (x, 550), 0.6,
+                  C_RED if tr > TOE_LIFT_RATIO else C_WHITE)
 
 def make_canvas(disp, info):
     dh, dw = disp.shape[:2]
@@ -580,6 +586,10 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
     heel_base, heel_scale = {}, None                            # frozen at the start of each rep
     heel_floor = {"LEFT": None, "RIGHT": None}                  # fallback baseline: lowest heel seen this rep
     heel_rise_max = 0.0
+    toe_s = {"LEFT": None, "RIGHT": None}                       # smoothed (heel y - toe y) in px per side; > 0 = toe above heel
+    pitch_buf = {"LEFT": deque(maxlen=HEEL_BASE_FRAMES), "RIGHT": deque(maxlen=HEEL_BASE_FRAMES)}   # standing values
+    pitch_base, pitch_floor = {}, {"LEFT": None, "RIGHT": None}
+    toe_rise_max = 0.0
     knee_toe_max = -9.0
     accuracies, last_acc = [], 0.0
     rep_rows, frame_rows = [], []
@@ -589,7 +599,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
         """Everything the side panel shows, read from the current state of the loop."""
         d = {"feedback": feedback, "level": level, "state": state, "reps": reps, "attempts": rep_id,
              "last_acc": last_acc, "avg_acc": (sum(accuracies) / len(accuracies)) if accuracies else None,
-             "last_result": last_result, "angles": None, "vels": None, "heel_rise": None}
+             "last_result": last_result, "angles": None, "vels": None, "heel_rise": None, "toe_rise": None}
         d.update(extra)
         return d
 
@@ -634,6 +644,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                 err_streak.clear()                       # an unusable frame breaks every streak
                 vk.reset(); vb.reset()
                 heel_s["LEFT"] = heel_s["RIGHT"] = None
+                toe_s["LEFT"] = toe_s["RIGHT"] = None
                 put_wrapped(disp, skip_msg, 16, 40, dw - 32, 0.7, C_RED, 28, 2, 3)
                 if present(make_canvas(disp, snapshot(skip_msg, "error")), show):
                     break
@@ -682,12 +693,19 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                 else:
                     heel_s[sd] = None
 
+            for sd, i_heel, i_toe in (("LEFT", LEFT_HEEL, LEFT_FOOT_INDEX), ("RIGHT", RIGHT_HEEL, RIGHT_FOOT_INDEX)):
+                if lm[i_heel].visibility >= VIS_MIN and lm[i_toe].visibility >= VIS_MIN:
+                    pitch = (lm[i_heel].y - lm[i_toe].y) * h                 # > 0 = toe higher than the heel
+                    toe_s[sd] = pitch if toe_s[sd] is None else ALPHA * toe_s[sd] + (1 - ALPHA) * pitch
+                else:
+                    toe_s[sd] = None
+
             # ---- state machine (state is updated FIRST so scoring uses the current frame's state)
             if knee_angle > STAND_KNEE:
                 if in_rep and (reached_depth or min_knee < PARTIAL_MIN_KNEE):
                     rep_id += 1
                     metrics, bounced = rep_metrics(rep_series, t_s) if rep_series else ({}, False)
-                    metrics = dict(metrics, m_heel_lift_max=round(heel_rise_max, 3),
+                    metrics = dict(metrics, m_heel_lift_max=round(heel_rise_max, 3), m_toe_lift_max=round(toe_rise_max, 3),
                                    m_knee_toe_max=round(knee_toe_max, 3) if knee_toe_max > -9 else "")
                     errs = sorted(c for c, n in err_max.items() if n >= (VEL_ERR_MIN_FRAMES if c in VEL_MSG else ERR_MIN_FRAMES))
                     if reached_depth and bounced:                  # BOUNCE is a single event, judged once per rep
@@ -724,6 +742,9 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                     heel_base = {sd: float(np.percentile(b, 80)) for sd, b in heel_buf.items() if len(b) >= HEEL_BASE_MIN_FRAMES}
                     heel_scale = float(np.median(scale_buf)) if len(scale_buf) >= HEEL_BASE_MIN_FRAMES else None
                     heel_floor = {"LEFT": None, "RIGHT": None}
+                    pitch_base = {sd: float(np.percentile(b, 20)) for sd, b in pitch_buf.items() if len(b) >= HEEL_BASE_MIN_FRAMES}
+                    pitch_floor = {"LEFT": None, "RIGHT": None}
+                    toe_rise_max = 0.0
                     heel_rise_max = 0.0
                     knee_toe_max = -9.0
                 min_knee = min(min_knee, knee_angle)
@@ -750,6 +771,9 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                     if heel_s[sd] is not None:
                         heel_buf[sd].append(heel_s[sd])
                 scale_buf.append(float(np.hypot(kx - ax, ky - ay)))
+                for sd in ("LEFT", "RIGHT"):
+                    if toe_s[sd] is not None:
+                        pitch_buf[sd].append(toe_s[sd])
 
             # ---- heel lift.  Baseline = 80th percentile of heel y (i.e. near its LOWEST position, since image y
             # ---- grows downward) over the standing frames just before the rep.  A high percentile, not the median,
@@ -767,6 +791,18 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                     heel_rise_max = max(heel_rise_max, heel_rise)
                     if heel_rise > HEEL_LIFT_RATIO:
                         heel_errs.append("HEEL_LIFT")
+            toe_errs, toe_rise = [], None
+            if in_rep and toe_s[side_name] is not None:
+                p = toe_s[side_name]
+                pf = pitch_floor[side_name]
+                pitch_floor[side_name] = p if pf is None else min(pf, p)     # fallback baseline: lowest the toe has been
+                p_ref = pitch_base.get(side_name, pitch_floor[side_name])
+                scale_t = heel_scale or float(np.hypot(kx - ax, ky - ay))
+                if scale_t > 1e-6:
+                    toe_rise = (p - p_ref) / scale_t                         # > 0 = toe is coming off the floor
+                    toe_rise_max = max(toe_rise_max, toe_rise)
+                    if toe_rise > TOE_LIFT_RATIO:
+                        toe_errs.append("TOE_LIFT")
 
             # ---- feedback + scoring
             feedback, level, frame_errs = "", "ok", []
@@ -811,7 +847,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                 else:
                     feedback = "Good - Drive Through Heels"
 
-            extra_errs = [c for c in heel_errs + vel_errs if c in ENABLED_ERRORS]
+            extra_errs = [c for c in heel_errs + toe_errs + vel_errs if c in ENABLED_ERRORS]
             frame_errs = frame_errs + extra_errs
             if extra_errs and level != "error":
                 feedback, level = ALERT_MSG[extra_errs[0]], "warn"
@@ -860,13 +896,14 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
             roi[:] = (roi * 0.35).astype(np.uint8)                                       # darken a box so it is readable on any background
             cv2.putText(disp, s_label, (16, th + 16), FONT, 0.8, s_color, 2, cv2.LINE_AA)
             info = snapshot(feedback, level, angles=(knee_angle, hip_angle, back_angle, ankle_angle),
-                            vels=(knee_vel, back_vel), heel_rise=heel_rise)
+                            vels=(knee_vel, back_vel), heel_rise=heel_rise, toe_rise=toe_rise)
 
             row.update(detected=1, state=state, feedback=feedback, errors=";".join(frame_errs),
                        knee=round(knee_angle, 1), hip=round(hip_angle, 1),
                        back=round(back_angle, 1), ankle=round(ankle_angle, 1),
                        knee_vel=round(knee_vel, 1), back_vel=round(back_vel, 1),
-                       heel_rise="" if heel_rise is None else round(heel_rise, 3))
+                       heel_rise="" if heel_rise is None else round(heel_rise, 3),
+                       toe_rise="" if toe_rise is None else round(toe_rise, 3))
             frame_rows.append(row)
 
             if present(make_canvas(disp, info), show):

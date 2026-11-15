@@ -1,0 +1,662 @@
+frame,time_s,detected,state,feedback,errors,knee,hip,back,ankle,knee_vel,back_vel,heel_rise,toe_rise
+0,0.0,1,S1,Standing - Start Your Squat,,171.8,174.9,2.0,110.3,0.0,0.0,,
+1,0.033,1,S1,Standing - Start Your Squat,,172.5,175.6,1.7,110.9,0.0,0.0,,
+2,0.067,1,S1,Standing - Start Your Squat,,173.2,176.0,1.6,111.4,0.0,0.0,,
+3,0.1,1,S1,Standing - Start Your Squat,,173.7,176.2,1.6,111.9,0.0,0.0,,
+4,0.133,1,S1,Standing - Start Your Squat,,174.0,176.4,1.5,112.1,16.4,-3.3,,
+5,0.167,1,S1,Standing - Start Your Squat,,174.7,176.8,1.4,112.0,17.2,-3.1,,
+6,0.2,1,S1,Standing - Start Your Squat,,175.4,176.8,1.6,112.2,17.7,-1.6,,
+7,0.233,1,S1,Standing - Start Your Squat,,175.9,176.8,1.8,112.3,17.3,-0.5,,
+8,0.267,1,S1,Standing - Start Your Squat,,176.0,176.6,2.0,112.7,15.3,1.0,,
+9,0.3,1,S1,Standing - Start Your Squat,,176.1,176.7,1.9,112.8,12.4,1.1,,
+10,0.333,1,S1,Standing - Start Your Squat,,176.3,176.9,1.8,112.8,10.9,1.0,,
+11,0.367,1,S1,Standing - Start Your Squat,,176.2,176.9,1.7,112.6,9.5,0.9,,
+12,0.4,1,S1,Standing - Start Your Squat,,176.2,176.9,1.7,112.5,6.5,1.0,,
+13,0.433,1,S1,Standing - Start Your Squat,,176.2,177.1,1.5,112.2,3.6,-0.4,,
+14,0.467,1,S1,Standing - Start Your Squat,,176.1,177.2,1.4,112.0,1.1,-1.8,,
+15,0.5,1,S1,Standing - Start Your Squat,,176.0,177.1,1.4,112.1,-0.1,-2.5,,
+16,0.533,1,S1,Standing - Start Your Squat,,175.9,176.7,1.5,112.2,-0.9,-1.6,,
+17,0.567,1,S1,Standing - Start Your Squat,,176.1,176.5,1.7,112.3,-0.8,-0.2,,
+18,0.6,1,S1,Standing - Start Your Squat,,176.3,176.3,1.9,112.4,0.2,0.7,,
+19,0.633,1,S1,Standing - Start Your Squat,,176.3,176.2,1.9,112.4,0.4,0.9,,
+20,0.667,1,S1,Standing - Start Your Squat,,176.3,176.2,1.9,112.5,0.4,1.5,,
+21,0.7,1,S1,Standing - Start Your Squat,,176.3,176.2,1.9,112.5,0.9,1.9,,
+22,0.733,1,S1,Standing - Start Your Squat,,176.3,176.2,1.8,112.3,1.3,1.9,,
+23,0.767,1,S1,Standing - Start Your Squat,,176.3,176.3,1.8,112.2,1.8,1.2,,
+24,0.8,1,S1,Standing - Start Your Squat,,176.3,176.3,1.8,112.1,1.2,0.1,,
+25,0.833,1,S1,Standing - Start Your Squat,,176.4,176.4,1.6,112.1,0.3,-1.1,,
+26,0.867,1,S1,Standing - Start Your Squat,,176.2,176.5,1.6,111.9,-0.6,-1.5,,
+27,0.9,1,S1,Standing - Start Your Squat,,176.1,176.5,1.5,111.9,-0.8,-1.6,,
+28,0.933,1,S1,Standing - Start Your Squat,,176.2,176.6,1.4,111.8,-0.7,-2.0,,
+29,0.967,1,S1,Standing - Start Your Squat,,176.1,176.6,1.3,111.9,-1.0,-2.5,,
+30,1.0,1,S1,Standing - Start Your Squat,,176.1,176.7,1.1,111.9,-1.2,-2.8,,
+31,1.033,1,S1,Standing - Start Your Squat,,176.0,176.7,1.0,112.4,-1.6,-3.1,,
+32,1.067,1,S1,Standing - Start Your Squat,,176.0,176.6,1.1,112.9,-1.7,-2.4,,
+33,1.1,1,S1,Standing - Start Your Squat,,175.8,176.5,1.1,113.6,-1.7,-2.0,,
+34,1.133,1,S1,Standing - Start Your Squat,,175.7,176.4,1.1,113.4,-1.9,-1.7,,
+35,1.167,1,S1,Standing - Start Your Squat,,175.5,176.4,1.1,113.0,-2.7,-1.4,,
+36,1.2,1,S1,Standing - Start Your Squat,,175.4,176.4,1.1,113.1,-2.9,-0.8,,
+37,1.233,1,S1,Standing - Start Your Squat,,175.4,176.3,1.1,112.7,-2.9,-0.2,,
+38,1.267,1,S1,Standing - Start Your Squat,,175.3,176.3,1.2,112.9,-2.6,0.5,,
+39,1.3,1,S1,Standing - Start Your Squat,,175.4,176.1,1.3,112.6,-2.6,1.0,,
+40,1.333,1,S1,Standing - Start Your Squat,,175.5,176.1,1.5,112.5,-1.1,1.6,,
+41,1.367,1,S1,Standing - Start Your Squat,,175.5,176.0,1.6,112.4,-0.8,2.1,,
+42,1.4,1,S1,Standing - Start Your Squat,,175.5,175.9,1.6,112.2,-0.3,2.3,,
+43,1.433,1,S1,Standing - Start Your Squat,,175.5,175.9,1.6,111.9,0.3,2.4,,
+44,1.467,1,S1,Standing - Start Your Squat,,175.4,176.4,1.4,112.1,0.0,1.1,,
+45,1.5,1,S1,Standing - Start Your Squat,,175.2,176.4,1.3,112.1,-0.5,0.4,,
+46,1.533,1,S1,Standing - Start Your Squat,,174.9,176.3,1.2,111.8,-2.1,-0.4,,
+47,1.567,1,S1,Standing - Start Your Squat,,174.7,176.2,1.2,111.7,-3.5,-1.0,,
+48,1.6,1,S1,Standing - Start Your Squat,,174.7,176.4,1.1,111.9,-3.2,-1.9,,
+49,1.633,1,S1,Standing - Start Your Squat,,174.7,176.5,1.1,111.6,-3.0,-2.4,,
+50,1.667,1,S1,Standing - Start Your Squat,,174.6,176.5,1.0,111.2,-3.7,-2.6,,
+51,1.7,1,S1,Standing - Start Your Squat,,174.8,177.0,0.8,111.1,-2.5,-2.4,,
+52,1.733,1,S1,Standing - Start Your Squat,,174.9,177.1,0.7,111.3,-1.6,-2.4,,
+53,1.767,1,S1,Standing - Start Your Squat,,174.5,177.0,0.6,111.2,-1.8,-2.5,,
+54,1.8,1,S1,Standing - Start Your Squat,,174.3,177.0,0.6,111.1,-1.6,-2.6,,
+55,1.833,1,S1,Standing - Start Your Squat,,174.3,177.0,0.6,111.0,-1.9,-2.3,,
+56,1.867,1,S1,Standing - Start Your Squat,,174.2,176.8,0.7,110.9,-2.2,-1.5,,
+57,1.9,1,S1,Standing - Start Your Squat,,174.2,176.8,0.8,110.9,-1.8,-1.0,,
+58,1.933,1,S1,Standing - Start Your Squat,,174.3,176.8,0.8,110.9,-2.4,0.1,,
+59,1.967,1,S1,Standing - Start Your Squat,,174.3,176.7,0.8,111.2,-2.4,0.4,,
+60,2.0,1,S1,Standing - Start Your Squat,,174.3,176.7,0.8,111.4,-0.5,0.7,,
+61,2.033,1,S1,Standing - Start Your Squat,,174.3,176.5,0.8,111.5,-0.3,1.0,,
+62,2.067,1,S1,Standing - Start Your Squat,,174.4,176.6,0.8,111.3,0.3,1.0,,
+63,2.1,1,S1,Standing - Start Your Squat,,174.5,176.8,0.7,111.4,1.2,0.0,,
+64,2.133,1,S1,Standing - Start Your Squat,,174.6,176.9,0.6,111.6,1.7,-0.8,,
+65,2.167,1,S1,Standing - Start Your Squat,,174.6,176.9,0.5,111.8,1.3,-1.3,,
+66,2.2,1,S1,Standing - Start Your Squat,,174.6,176.9,0.5,111.9,1.0,-1.4,,
+67,2.233,1,S1,Standing - Start Your Squat,,174.6,176.9,0.5,111.9,0.9,-1.2,,
+68,2.266,1,S1,Standing - Start Your Squat,,174.5,176.7,0.6,112.2,1.2,-1.0,,
+69,2.3,1,S1,Standing - Start Your Squat,,174.5,176.6,0.7,112.1,0.5,-0.6,,
+70,2.333,1,S1,Standing - Start Your Squat,,174.4,176.3,0.9,112.1,-0.6,0.7,,
+71,2.366,1,S1,Standing - Start Your Squat,,174.3,176.0,1.1,111.8,-1.2,2.2,,
+72,2.4,1,S1,Standing - Start Your Squat,,174.2,175.5,1.5,111.8,-1.6,4.1,,
+73,2.433,1,S1,Standing - Start Your Squat,,174.1,175.0,2.0,111.6,-1.9,6.6,,
+74,2.466,1,S1,Standing - Start Your Squat,,173.8,174.3,2.5,111.4,-3.2,8.4,,
+75,2.5,1,S1,Standing - Start Your Squat,,172.9,173.1,3.1,111.2,-7.1,10.7,,
+76,2.533,1,S1,Standing - Start Your Squat,,171.5,172.0,3.5,110.6,-13.0,12.0,,
+77,2.566,1,S1,Standing - Start Your Squat,,170.8,171.1,4.1,110.3,-15.2,13.7,,
+78,2.6,1,S1,Standing - Start Your Squat,,170.4,170.2,4.7,110.3,-16.5,15.2,,
+79,2.633,1,S1,Standing - Start Your Squat,,170.1,169.5,5.1,110.2,-17.4,15.6,,
+80,2.666,1,S1,Standing - Start Your Squat,,169.9,169.0,5.4,110.2,-18.1,14.7,,
+81,2.7,1,S1,Standing - Start Your Squat,,169.6,168.4,5.9,110.1,-18.0,14.7,,
+82,2.733,1,S1,Standing - Start Your Squat,,169.3,167.9,6.2,109.8,-15.3,13.3,,
+83,2.766,1,S1,Standing - Start Your Squat,,169.3,167.9,6.4,109.5,-9.4,12.3,,
+84,2.8,1,S1,Standing - Start Your Squat,,169.2,167.8,6.5,109.0,-7.1,10.5,,
+85,2.833,1,S1,Standing - Start Your Squat,,169.2,167.6,6.9,108.4,-5.4,9.4,,
+86,2.866,1,S1,Standing - Start Your Squat,,169.3,167.3,7.3,108.1,-3.6,9.5,,
+87,2.9,1,S1,Standing - Start Your Squat,,169.3,166.9,7.8,107.9,-2.4,10.2,,
+88,2.933,1,S1,Standing - Start Your Squat,,169.3,166.3,8.5,107.6,-1.3,11.1,,
+89,2.966,1,S1,Standing - Start Your Squat,,169.2,165.9,8.9,107.2,-0.4,11.7,,
+90,3.0,1,S1,Standing - Start Your Squat,,169.2,165.9,9.1,107.0,-0.1,11.9,,
+91,3.033,1,S1,Standing - Start Your Squat,,169.4,166.0,9.2,106.6,0.9,11.7,,
+92,3.066,1,S1,Standing - Start Your Squat,,169.7,166.6,9.0,106.2,2.4,9.3,,
+93,3.1,1,S1,Standing - Start Your Squat,,170.1,167.7,8.5,105.9,3.3,4.8,,
+94,3.133,1,S1,Standing - Start Your Squat,,170.5,168.2,8.3,106.3,4.9,1.8,,
+95,3.166,1,S1,Standing - Start Your Squat,,170.8,168.6,8.1,106.5,6.4,-1.8,,
+96,3.2,1,S1,Standing - Start Your Squat,,171.0,169.3,7.7,106.6,7.9,-5.2,,
+97,3.233,1,S1,Standing - Start Your Squat,,171.2,170.0,7.3,106.7,8.6,-7.7,,
+98,3.266,1,S1,Standing - Start Your Squat,,171.1,169.9,7.4,106.7,7.5,-7.7,,
+99,3.3,1,S1,Standing - Start Your Squat,,170.9,169.5,7.8,106.7,5.1,-5.4,,
+100,3.333,1,S1,Standing - Start Your Squat,,170.6,168.9,8.2,106.8,2.2,-1.0,,
+101,3.366,1,S1,Standing - Start Your Squat,,169.7,167.9,8.8,106.5,-3.2,2.4,,
+102,3.4,1,S1,Standing - Start Your Squat,,169.1,166.4,9.7,106.6,-7.2,7.2,,
+103,3.433,1,S1,Standing - Start Your Squat,,168.8,164.7,11.0,107.0,-9.6,13.8,,
+104,3.466,1,S1,Standing - Start Your Squat,,168.2,162.5,12.6,107.5,-13.2,22.4,,
+105,3.5,1,S1,Standing - Start Your Squat,,167.0,159.0,14.8,107.8,-17.7,31.5,,
+106,3.533,1,S1,Standing - Start Your Squat,,165.4,154.8,17.5,108.0,-23.7,41.6,,
+107,3.566,1,S2,Keep Descending,,163.7,149.9,20.7,108.0,-29.4,53.3,0.008,-0.004
+108,3.6,1,S2,Keep Descending,,162.8,144.3,24.6,108.2,-29.9,67.6,0.008,0.0
+109,3.633,1,S2,Keep Descending,,162.4,139.3,28.4,108.3,-28.7,80.0,0.001,0.014
+110,3.666,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,161.3,133.5,32.3,109.0,-32.3,91.3,-0.001,0.018
+111,3.7,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,160.8,128.6,36.1,109.8,-31.5,100.8,-0.0,0.017
+112,3.733,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,158.7,122.6,40.4,109.1,-35.4,109.7,-0.005,0.023
+113,3.766,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,156.7,117.2,44.2,108.4,-37.2,114.5,-0.006,0.029
+114,3.8,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,153.9,111.0,48.0,107.2,-42.1,117.0,-0.004,0.036
+115,3.833,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,149.6,104.2,51.5,105.7,-56.2,115.3,-0.004,0.042
+116,3.866,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,144.5,97.7,54.4,104.0,-76.6,111.5,-0.005,0.044
+117,3.9,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,138.1,91.4,56.6,102.2,-99.1,104.5,-0.006,0.041
+118,3.933,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,132.1,86.5,57.6,100.7,-123.3,92.4,-0.007,0.039
+119,3.966,1,S2,Avoid Swinging - Stay Controlled,,126.4,81.6,58.7,98.9,-138.8,78.3,-0.009,0.037
+120,4.0,1,S2,Avoid Swinging - Stay Controlled,,118.5,75.6,59.6,96.4,-164.0,65.9,-0.005,0.032
+121,4.033,1,S2,Avoid Swinging - Stay Controlled,,112.0,69.8,60.7,94.8,-179.8,54.5,-0.002,0.027
+122,4.066,1,S2,Avoid Swinging - Stay Controlled,,106.5,64.9,61.4,93.9,-184.9,42.6,-0.001,0.021
+123,4.1,1,S2,Avoid Swinging - Stay Controlled,,101.5,60.0,62.2,93.6,-184.3,33.5,-0.003,0.018
+124,4.133,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,96.7,55.8,62.4,93.6,-177.8,24.8,0.001,0.01
+125,4.166,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,92.8,53.2,62.2,93.6,-168.2,19.7,0.006,0.002
+126,4.2,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,89.5,50.5,62.5,94.1,-157.9,16.4,0.008,-0.006
+127,4.233,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,87.7,49.2,62.5,94.5,-131.9,12.5,0.011,-0.011
+128,4.266,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.4,48.4,62.5,95.0,-109.7,7.8,0.015,-0.018
+129,4.3,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.4,47.6,62.7,95.4,-90.6,5.3,0.016,-0.021
+130,4.333,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,84.4,47.1,62.6,95.6,-73.7,1.5,0.017,-0.024
+131,4.366,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,84.2,46.9,63.0,95.6,-53.5,2.3,0.017,-0.026
+132,4.4,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,84.2,47.3,62.9,95.4,-36.9,3.0,0.017,-0.028
+133,4.433,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.4,48.3,62.9,95.8,-17.8,1.9,0.019,-0.031
+134,4.466,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.6,48.7,63.6,96.3,-4.6,4.9,0.02,-0.032
+135,4.5,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,89.0,50.5,63.8,96.8,11.2,5.6,0.021,-0.033
+136,4.533,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,92.2,54.3,62.6,97.5,29.2,-0.3,0.024,-0.033
+137,4.566,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,96.5,59.2,61.3,97.8,52.2,-5.7,0.024,-0.03
+138,4.6,1,S4,Squat Deeper,,101.0,65.0,59.0,97.9,72.2,-17.2,0.025,-0.026
+139,4.633,1,S4,Squat Deeper,,106.4,71.5,56.8,98.4,95.1,-26.3,0.025,-0.024
+140,4.666,1,S4,Squat Deeper,,111.6,78.0,54.2,99.4,112.6,-37.6,0.022,-0.02
+141,4.7,1,S4,Squat Deeper,,116.3,84.0,51.8,100.2,127.5,-50.6,0.014,-0.011
+142,4.733,1,S4,Squat Deeper,,122.5,91.7,48.6,101.7,143.6,-65.2,0.006,-0.003
+143,4.766,1,S4,Squat Deeper,,126.9,99.1,45.1,101.9,148.8,-74.9,0.011,-0.002
+144,4.8,1,S4,Squat Deeper,,131.1,106.0,42.0,101.4,148.3,-82.6,0.012,0.006
+145,4.833,1,S4,Squat Deeper,,135.0,112.9,38.4,100.6,145.6,-88.1,0.016,0.013
+146,4.866,1,S4,Squat Deeper,TORSO_SWING,138.8,118.9,35.1,101.8,138.9,-92.9,0.017,0.014
+147,4.9,1,S4,Squat Deeper,TORSO_SWING,145.0,126.5,31.3,104.7,142.8,-97.8,0.018,0.012
+148,4.933,1,S4,Squat Deeper,TORSO_SWING,151.6,132.6,29.2,107.3,151.3,-97.0,0.018,0.01
+149,4.966,1,S4,Squat Deeper,TORSO_SWING,157.9,138.7,26.5,110.2,151.8,-94.6,0.02,0.008
+150,5.0,1,S4,Squat Deeper,TORSO_SWING,163.4,146.3,22.7,111.5,156.2,-96.2,0.021,0.004
+151,5.033,1,S1,Standing - Start Your Squat,,167.0,151.4,20.0,110.3,153.8,-94.3,,
+152,5.066,1,S1,Standing - Start Your Squat,,172.1,157.3,17.4,111.5,159.0,-90.1,,
+153,5.1,1,S1,Standing - Start Your Squat,,176.4,163.5,14.5,112.1,161.3,-88.3,,
+154,5.133,1,S1,Standing - Start Your Squat,,177.8,166.8,12.4,111.7,140.7,-81.1,,
+155,5.166,1,S1,Standing - Start Your Squat,,178.2,168.7,11.1,111.3,113.9,-77.6,,
+156,5.2,1,S1,Standing - Start Your Squat,,177.4,169.5,10.1,110.1,83.6,-70.4,,
+157,5.233,1,S1,Standing - Start Your Squat,,176.5,169.9,9.3,109.4,56.5,-57.2,,
+158,5.266,1,S1,Standing - Start Your Squat,,176.0,170.4,8.7,108.7,38.3,-48.5,,
+159,5.3,1,S1,Standing - Start Your Squat,,175.6,170.9,8.0,108.3,15.3,-40.2,,
+160,5.333,1,S1,Standing - Start Your Squat,,175.3,171.4,7.4,108.4,-4.7,-30.2,,
+161,5.366,1,S1,Standing - Start Your Squat,,175.0,171.5,7.1,108.0,-12.1,-22.7,,
+162,5.4,1,S1,Standing - Start Your Squat,,173.7,169.9,7.7,107.6,-19.1,-14.3,,
+163,5.433,1,S1,Standing - Start Your Squat,,171.9,166.6,9.2,107.8,-23.7,-3.6,,
+164,5.466,1,S1,Standing - Start Your Squat,,170.4,163.9,10.6,108.2,-26.2,5.3,,
+165,5.5,1,S1,Standing - Start Your Squat,,168.8,161.2,11.8,108.3,-30.8,13.6,,
+166,5.533,1,S1,Standing - Start Your Squat,,165.9,156.9,13.9,107.6,-41.6,25.4,,
+167,5.566,1,S2,Keep Descending,,162.2,151.5,16.7,106.4,-56.2,39.8,0.009,0.003
+168,5.6,1,S2,Keep Descending,,159.6,145.6,20.3,106.0,-65.7,56.7,0.009,0.003
+169,5.633,1,S2,Keep Descending,,157.4,139.5,24.3,106.7,-69.9,70.9,0.009,0.002
+170,5.666,1,S2,Keep Descending,,155.7,133.6,28.3,107.8,-69.2,81.7,0.009,0.002
+171,5.7,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,154.0,128.4,31.8,108.0,-70.3,91.2,0.008,0.002
+172,5.733,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,150.8,121.9,35.8,107.4,-76.9,102.8,0.006,0.005
+173,5.766,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,145.9,115.2,39.0,107.0,-85.9,107.3,0.01,0.003
+174,5.8,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,140.7,109.4,41.6,105.5,-92.2,106.6,0.009,0.003
+175,5.833,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,134.2,103.6,43.2,103.1,-109.2,98.0,0.007,0.005
+176,5.866,1,S2,Avoid Swinging - Stay Controlled,,128.2,98.2,44.6,101.1,-125.2,87.3,0.01,0.006
+177,5.9,1,S2,Avoid Swinging - Stay Controlled,,122.4,92.8,46.1,99.2,-143.1,76.2,0.011,0.005
+178,5.933,1,S2,Avoid Swinging - Stay Controlled,,115.4,86.9,47.5,97.0,-165.7,67.3,0.012,0.003
+179,5.966,1,S2,Avoid Swinging - Stay Controlled,,109.6,81.5,48.9,96.0,-176.6,56.0,0.014,-0.002
+180,6.0,1,S2,Avoid Swinging - Stay Controlled,,103.2,75.9,49.9,95.1,-183.0,47.0,0.015,-0.009
+181,6.033,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,97.4,70.0,51.4,94.4,-185.9,42.0,0.019,-0.015
+182,6.066,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,92.6,65.7,52.2,94.0,-178.1,38.6,0.03,-0.028
+183,6.1,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,89.4,62.6,52.7,94.2,-166.5,34.6,0.039,-0.037
+184,6.133,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,86.3,59.7,53.2,94.1,-154.6,30.4,0.043,-0.041
+185,6.166,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.8,56.9,54.2,94.3,-135.3,28.4,0.046,-0.045
+186,6.2,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.3,55.2,54.7,95.4,-117.0,25.1,0.049,-0.05
+187,6.233,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,81.5,54.3,54.9,95.5,-93.2,21.5,0.049,-0.052
+188,6.266,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,81.6,54.4,55.0,95.8,-67.5,15.3,0.048,-0.052
+189,6.3,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.5,55.5,54.9,97.5,-43.1,11.5,0.049,-0.055
+190,6.333,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.8,57.0,54.4,98.0,-23.9,7.4,0.049,-0.056
+191,6.366,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.1,57.9,54.5,98.6,-5.1,5.8,0.05,-0.057
+192,6.4,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,88.1,61.8,53.6,99.2,18.7,-2.3,0.054,-0.059
+193,6.433,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,92.4,66.7,52.4,99.6,43.3,-10.0,0.054,-0.059
+194,6.466,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,98.7,73.7,50.3,101.5,73.7,-20.0,0.054,-0.061
+195,6.5,1,S4,Squat Deeper,,103.9,80.4,47.6,101.9,95.6,-31.7,0.046,-0.053
+196,6.533,1,S4,Squat Deeper,,109.8,87.8,44.8,101.9,116.8,-43.2,0.04,-0.042
+197,6.566,1,S4,Squat Deeper,,115.4,95.3,41.6,100.5,135.6,-55.2,0.034,-0.027
+198,6.6,1,S4,Squat Deeper,,120.7,102.9,38.1,100.8,152.6,-70.6,0.031,-0.021
+199,6.633,1,S4,Squat Deeper,,126.3,111.0,34.4,101.1,163.5,-82.3,0.028,-0.016
+200,6.666,1,S4,Squat Deeper,TORSO_SWING,132.1,118.3,31.0,102.2,170.0,-91.6,0.012,-0.001
+201,6.699,1,S4,Squat Deeper,TORSO_SWING,138.6,126.1,27.5,103.4,171.0,-97.7,0.01,0.004
+202,6.733,1,S4,Squat Deeper,TORSO_SWING,144.7,133.0,24.6,105.4,175.0,-98.5,0.012,0.001
+203,6.766,1,S4,Squat Deeper,TORSO_SWING,151.6,140.2,21.9,105.4,179.1,-98.3,0.012,0.001
+204,6.799,1,S4,Squat Deeper,TORSO_SWING,158.4,146.2,19.8,107.4,184.2,-93.2,0.013,0.0
+205,6.833,1,S4,Squat Deeper,,163.1,150.7,17.9,108.4,181.9,-86.2,0.011,0.001
+206,6.866,1,S1,Standing - Start Your Squat,,167.6,155.6,15.8,109.3,177.0,-79.6,,
+207,6.899,1,S1,Standing - Start Your Squat,,171.9,160.5,13.7,110.6,170.4,-74.3,,
+208,6.933,1,S1,Standing - Start Your Squat,,174.7,165.2,11.5,110.6,154.8,-68.6,,
+209,6.966,1,S1,Standing - Start Your Squat,,176.9,168.8,9.8,110.7,137.8,-63.5,,
+210,6.999,1,S1,Standing - Start Your Squat,,177.0,169.7,9.1,110.7,108.8,-54.6,,
+211,7.033,1,S1,Standing - Start Your Squat,,177.5,170.5,8.6,111.2,81.7,-48.0,,
+212,7.066,1,S1,Standing - Start Your Squat,,177.4,170.5,8.5,111.1,61.2,-40.4,,
+213,7.099,1,S1,Standing - Start Your Squat,,176.9,170.5,8.3,110.6,40.2,-32.2,,
+214,7.133,1,S1,Standing - Start Your Squat,,175.9,170.0,8.1,110.6,17.4,-23.9,,
+215,7.166,1,S1,Standing - Start Your Squat,,174.6,169.5,8.0,110.4,-0.1,-14.9,,
+216,7.199,1,S1,Standing - Start Your Squat,,173.1,167.8,8.4,110.2,-16.4,-5.8,,
+217,7.233,1,S1,Standing - Start Your Squat,,171.6,165.4,9.4,110.1,-23.0,1.3,,
+218,7.266,1,S1,Standing - Start Your Squat,,170.5,163.8,10.2,109.9,-29.7,6.8,,
+219,7.299,1,S1,Standing - Start Your Squat,,168.9,161.5,11.2,109.7,-36.3,11.5,,
+220,7.333,1,S1,Standing - Start Your Squat,,165.5,158.4,12.3,108.1,-49.0,17.0,,
+221,7.366,1,S2,Keep Descending,,161.2,154.1,14.1,106.1,-62.9,25.5,-0.001,0.004
+222,7.399,1,S2,Keep Descending,,157.7,148.9,17.0,104.8,-72.8,38.7,-0.001,0.004
+223,7.433,1,S2,Keep Descending,,154.9,143.3,20.4,104.1,-77.9,51.4,-0.002,0.006
+224,7.466,1,S2,Keep Descending,,152.2,136.9,24.2,104.2,-83.1,63.2,-0.003,0.007
+225,7.499,1,S2,Keep Descending,,148.9,129.7,28.4,105.0,-92.6,77.8,-0.003,0.008
+226,7.533,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,145.7,123.2,32.2,105.1,-99.7,90.1,-0.002,0.004
+227,7.566,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,140.5,115.9,35.7,103.8,-107.2,100.4,-0.003,0.006
+228,7.599,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,134.7,108.6,39.3,103.1,-113.7,108.2,0.0,0.003
+229,7.633,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,128.8,101.5,42.5,101.4,-123.6,109.4,0.002,0.0
+230,7.666,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,124.1,95.4,45.3,100.2,-132.1,106.8,0.004,-0.002
+231,7.699,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,118.0,88.6,48.1,98.4,-146.8,102.5,0.006,-0.003
+232,7.733,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,110.9,82.2,49.8,96.3,-162.9,91.8,0.002,-0.001
+233,7.766,1,S2,Avoid Swinging - Stay Controlled,,104.3,75.3,52.1,95.0,-177.2,85.3,0.004,-0.007
+234,7.799,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,98.7,69.0,54.4,94.5,-179.0,80.1,0.01,-0.018
+235,7.833,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,93.7,63.7,55.8,93.9,-176.0,70.6,0.013,-0.023
+236,7.866,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,89.1,59.6,56.7,93.8,-170.3,60.7,0.015,-0.033
+237,7.899,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,85.6,56.5,57.4,93.4,-165.1,51.7,0.02,-0.041
+238,7.933,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.8,53.8,57.7,94.3,-150.6,41.2,0.023,-0.045
+239,7.966,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,81.5,52.1,57.9,96.0,-126.1,34.8,0.024,-0.047
+240,7.999,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,80.4,51.5,57.5,96.8,-102.6,23.2,0.029,-0.052
+241,8.033,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,80.0,51.5,57.4,96.9,-80.3,12.8,0.034,-0.056
+242,8.066,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,80.3,52.1,57.2,96.8,-57.4,5.9,0.036,-0.059
+243,8.099,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,81.2,53.8,56.7,97.0,-33.7,0.2,0.039,-0.062
+244,8.133,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.2,56.0,56.4,97.1,-9.9,-4.3,0.04,-0.063
+245,8.166,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,87.6,61.2,55.6,97.3,20.3,-9.1,0.046,-0.068
+246,8.199,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,92.4,67.6,53.7,97.2,46.7,-18.0,0.045,-0.067
+247,8.233,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,97.9,74.1,51.7,97.7,75.2,-25.1,0.045,-0.064
+248,8.266,1,S4,Squat Deeper,,104.0,81.2,48.9,98.4,103.0,-36.3,0.037,-0.052
+249,8.299,1,S4,Squat Deeper,,110.9,89.0,46.1,98.9,131.1,-47.6,0.035,-0.04
+250,8.333,1,S4,Squat Deeper,,116.6,96.7,43.1,97.3,151.8,-58.5,0.03,-0.021
+251,8.366,1,S4,Squat Deeper,,122.8,104.7,39.9,98.0,169.6,-70.6,0.029,-0.016
+252,8.399,1,S4,Squat Deeper,,129.0,112.3,36.8,99.5,177.7,-80.4,0.028,-0.012
+253,8.433,1,S4,Squat Deeper,,134.8,119.8,33.3,101.3,182.0,-87.4,0.021,-0.006
+254,8.466,1,S4,Squat Deeper,TORSO_SWING,142.3,127.6,30.2,103.9,190.3,-91.9,0.02,-0.004
+255,8.499,1,S4,Squat Deeper,TORSO_SWING,149.0,134.7,27.4,105.8,192.6,-92.3,0.019,-0.005
+256,8.533,1,S4,Squat Deeper,TORSO_SWING,156.4,142.7,24.1,107.5,195.2,-94.3,0.018,-0.005
+257,8.566,1,S4,Squat Deeper,TORSO_SWING,162.5,149.6,21.0,107.5,196.7,-94.7,0.014,-0.004
+258,8.599,1,S1,Standing - Start Your Squat,,167.4,155.3,18.5,109.4,190.9,-91.9,,
+259,8.633,1,S1,Standing - Start Your Squat,,171.4,159.8,16.5,111.0,181.6,-86.9,,
+260,8.666,1,S1,Standing - Start Your Squat,,174.3,164.5,14.3,111.5,169.2,-81.5,,
+261,8.699,1,S1,Standing - Start Your Squat,,176.9,168.3,12.7,111.6,148.2,-75.1,,
+262,8.733,1,S1,Standing - Start Your Squat,,178.2,170.7,11.5,111.6,125.2,-68.2,,
+263,8.766,1,S1,Standing - Start Your Squat,,178.3,171.6,10.9,110.7,93.9,-56.4,,
+264,8.799,1,S1,Standing - Start Your Squat,,177.6,171.2,10.9,110.4,64.4,-43.5,,
+265,8.833,1,S1,Standing - Start Your Squat,,176.7,171.0,10.7,109.9,40.2,-33.5,,
+266,8.866,1,S1,Standing - Start Your Squat,,176.4,170.6,10.7,110.0,21.7,-25.1,,
+267,8.899,1,S1,Standing - Start Your Squat,,176.1,170.6,10.4,109.9,7.6,-16.5,,
+268,8.933,1,S1,Standing - Start Your Squat,,175.4,170.1,10.3,109.5,-6.3,-10.3,,
+269,8.966,1,S1,Standing - Start Your Squat,,174.6,169.0,10.6,109.7,-15.4,-3.7,,
+270,8.999,1,S1,Standing - Start Your Squat,,173.8,167.6,11.3,109.9,-19.3,1.7,,
+271,9.033,1,S1,Standing - Start Your Squat,,173.0,166.1,12.0,110.0,-19.7,4.9,,
+272,9.066,1,S1,Standing - Start Your Squat,,171.3,163.4,13.3,110.1,-23.3,11.1,,
+273,9.099,1,S1,Standing - Start Your Squat,,167.0,157.6,15.8,109.4,-40.4,22.0,,
+274,9.133,1,S2,Keep Descending,,162.8,151.3,18.9,108.1,-57.1,36.1,0.007,0.0
+275,9.166,1,S2,Keep Descending,,158.8,144.5,22.5,107.5,-71.1,52.2,0.007,0.003
+276,9.199,1,S2,Keep Descending,,154.8,137.2,26.6,106.0,-84.6,68.3,0.007,0.008
+277,9.233,1,S2,Keep Descending,,151.5,129.9,30.8,105.6,-95.4,83.7,0.005,0.012
+278,9.266,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,148.9,124.0,34.3,105.9,-103.3,95.4,0.004,0.011
+279,9.299,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,144.4,117.4,37.9,105.2,-115.2,105.6,0.004,0.011
+280,9.333,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,140.2,111.2,41.2,104.7,-114.8,108.8,0.005,0.011
+281,9.366,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,134.9,104.3,44.1,103.4,-119.6,108.2,0.004,0.011
+282,9.399,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,129.9,97.7,47.0,102.7,-123.8,105.0,0.008,0.009
+283,9.433,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,124.4,92.0,48.9,101.4,-130.6,95.7,0.009,0.008
+284,9.466,1,S2,Avoid Swinging - Stay Controlled,,119.1,87.1,50.0,100.6,-139.0,82.3,0.012,0.005
+285,9.499,1,S2,Avoid Swinging - Stay Controlled,,112.8,80.8,52.0,100.2,-154.8,75.9,0.014,-0.003
+286,9.533,1,S2,Avoid Swinging - Stay Controlled,,106.6,74.5,54.1,98.9,-162.1,69.6,0.016,-0.009
+287,9.566,1,S2,Avoid Swinging - Stay Controlled,,101.4,69.4,55.6,96.9,-166.3,61.5,0.016,-0.013
+288,9.599,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,97.3,64.7,57.1,95.9,-161.0,55.8,0.017,-0.017
+289,9.633,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,94.2,60.7,58.6,95.7,-153.1,49.9,0.02,-0.02
+290,9.666,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,90.5,57.0,59.4,95.8,-145.0,44.9,0.019,-0.022
+291,9.699,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,87.7,54.4,59.8,95.7,-134.6,41.7,0.019,-0.024
+292,9.733,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.6,52.3,59.7,96.5,-116.6,33.1,0.021,-0.028
+293,9.766,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.6,50.5,59.6,97.1,-98.6,23.3,0.025,-0.032
+294,9.799,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.2,49.5,59.4,97.2,-82.4,16.6,0.027,-0.034
+295,9.833,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,81.7,49.0,59.6,97.5,-66.8,10.4,0.029,-0.036
+296,9.866,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.0,49.7,59.1,97.9,-52.6,2.0,0.03,-0.036
+297,9.899,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.0,51.1,58.8,98.6,-32.2,-2.4,0.031,-0.038
+298,9.933,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.5,52.1,58.4,99.3,-18.2,-6.0,0.032,-0.038
+299,9.966,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.1,54.7,58.5,99.2,2.3,-5.3,0.032,-0.038
+300,9.999,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,90.0,59.2,57.7,98.8,27.6,-8.1,0.032,-0.038
+301,10.033,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,95.3,65.0,56.4,98.4,56.0,-13.3,0.03,-0.033
+302,10.066,1,S4,Squat Deeper,,101.7,72.1,54.2,99.2,85.7,-22.8,0.022,-0.023
+303,10.099,1,S4,Squat Deeper,,108.6,79.4,51.5,101.1,114.4,-32.5,0.017,-0.017
+304,10.133,1,S4,Squat Deeper,,115.1,86.7,48.7,102.0,137.3,-43.2,0.011,-0.008
+305,10.166,1,S4,Squat Deeper,,121.6,93.8,46.3,102.9,163.5,-51.5,0.008,0.001
+306,10.199,1,S4,Squat Deeper,,128.1,101.2,43.8,103.7,179.9,-63.0,0.01,0.005
+307,10.233,1,S4,Squat Deeper,,133.6,107.9,41.2,104.5,187.0,-70.6,0.011,0.006
+308,10.266,1,S4,Squat Deeper,,138.8,114.8,38.1,105.6,186.6,-78.2,0.011,0.006
+309,10.299,1,S4,Squat Deeper,,145.2,121.8,35.2,107.7,186.2,-81.5,0.011,0.006
+310,10.333,1,S4,Squat Deeper,,153.0,129.8,32.1,110.1,190.2,-83.4,0.01,0.008
+311,10.366,1,S4,Squat Deeper,,159.8,136.7,29.3,111.9,191.9,-83.3,0.01,0.008
+312,10.399,1,S1,Standing - Start Your Squat,,167.0,143.2,26.9,114.4,194.6,-83.5,,
+313,10.433,1,S1,Standing - Start Your Squat,,171.2,149.0,24.2,115.1,184.7,-84.1,,
+314,10.466,1,S1,Standing - Start Your Squat,,174.9,153.3,22.4,115.9,177.0,-80.4,,
+315,10.499,1,S1,Standing - Start Your Squat,,176.6,155.6,21.5,116.1,162.1,-71.3,,
+316,10.533,1,S1,Standing - Start Your Squat,,178.2,158.0,20.3,116.2,141.5,-64.1,,
+317,10.566,1,S1,Standing - Start Your Squat,,178.4,158.6,19.8,115.9,108.8,-52.4,,
+318,10.599,1,S1,Standing - Start Your Squat,,178.1,158.9,19.4,115.7,78.3,-42.4,,
+319,10.633,1,S1,Standing - Start Your Squat,,177.5,158.8,19.3,115.4,44.9,-32.5,,
+320,10.666,1,S1,Standing - Start Your Squat,,176.9,158.5,19.1,115.1,24.4,-21.6,,
+321,10.699,1,S1,Standing - Start Your Squat,,176.6,158.6,18.9,114.8,6.9,-15.0,,
+322,10.733,1,S1,Standing - Start Your Squat,,176.4,158.7,18.9,114.9,-0.8,-11.0,,
+323,10.766,1,S1,Standing - Start Your Squat,,176.3,158.3,19.3,115.0,-8.0,-4.3,,
+324,10.799,1,S1,Standing - Start Your Squat,,175.8,157.3,19.8,115.2,-11.0,0.0,,
+325,10.833,1,S1,Standing - Start Your Squat,,174.8,155.3,20.9,114.8,-14.1,6.4,,
+326,10.866,1,S1,Standing - Start Your Squat,,173.3,152.0,22.8,114.4,-18.2,15.3,,
+327,10.899,1,S1,Standing - Start Your Squat,,170.1,146.4,25.8,114.2,-29.0,28.5,,
+328,10.933,1,S1,Standing - Start Your Squat,,167.1,140.6,29.1,114.0,-40.3,43.7,,
+329,10.966,1,S2,Keep Descending,,164.7,134.9,32.6,114.7,-50.3,58.8,0.006,0.002
+330,10.999,1,S2,Keep Back Straight While Descending,,162.5,129.7,35.9,114.6,-59.0,71.3,-0.0,0.011
+331,11.032,1,S2,Keep Back Straight While Descending,,159.7,124.2,39.1,113.9,-69.1,82.5,-0.002,0.016
+332,11.066,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,155.7,118.2,42.2,112.7,-82.0,91.1,-0.002,0.019
+333,11.099,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,151.2,112.4,45.0,110.7,-94.6,95.1,-0.004,0.028
+334,11.132,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,146.2,106.7,47.6,107.1,-102.5,93.4,-0.007,0.04
+335,11.166,1,S2,Avoid Swinging - Stay Controlled,,140.6,100.7,49.8,104.8,-113.8,88.6,-0.007,0.044
+336,11.199,1,S2,Avoid Swinging - Stay Controlled,,135.4,95.1,51.8,104.0,-125.4,82.2,-0.006,0.043
+337,11.232,1,S2,Avoid Swinging - Stay Controlled,,129.6,89.5,53.6,102.5,-141.3,75.6,-0.006,0.04
+338,11.266,1,S2,Avoid Swinging - Stay Controlled,,123.8,83.8,55.3,101.5,-153.9,69.3,-0.005,0.033
+339,11.299,1,S2,Avoid Swinging - Stay Controlled,,119.8,78.8,57.1,101.7,-153.7,63.9,-0.005,0.023
+340,11.332,1,S2,Avoid Swinging - Stay Controlled,,114.4,74.0,58.2,99.9,-157.6,56.5,-0.005,0.02
+341,11.366,1,S2,Avoid Swinging - Stay Controlled,,109.4,69.3,59.3,98.6,-157.5,50.5,-0.005,0.016
+342,11.399,1,S2,Avoid Swinging - Stay Controlled,,105.7,64.8,60.7,98.4,-149.6,46.5,-0.005,0.012
+343,11.432,1,S2,Avoid Swinging - Stay Controlled,,101.3,60.4,61.3,97.7,-146.4,40.9,-0.005,0.011
+344,11.466,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,97.2,57.4,61.2,96.8,-138.8,33.0,-0.004,0.008
+345,11.499,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,93.7,54.7,61.4,96.3,-128.8,26.1,-0.003,0.005
+346,11.532,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,90.8,52.5,61.5,96.1,-124.4,18.8,-0.003,0.003
+347,11.566,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,88.1,50.5,61.3,97.5,-112.7,13.2,0.002,-0.006
+348,11.599,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.9,48.6,62.2,98.3,-96.4,12.3,0.004,-0.01
+349,11.632,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.2,48.3,61.9,99.4,-83.7,5.3,0.006,-0.017
+350,11.666,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.0,47.8,62.4,99.5,-65.4,4.6,0.006,-0.02
+351,11.699,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.3,47.0,63.0,99.5,-51.0,7.4,0.007,-0.023
+352,11.732,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.7,47.4,63.1,99.4,-34.4,7.4,0.008,-0.024
+353,11.766,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.5,48.3,63.1,100.8,-18.4,7.0,0.005,-0.024
+354,11.799,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,87.4,49.2,63.1,101.0,-3.0,7.9,0.005,-0.021
+355,11.832,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,89.8,50.8,63.6,100.3,12.1,5.7,0.004,-0.02
+356,11.866,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,93.4,53.9,63.5,99.6,31.2,7.0,0.004,-0.017
+357,11.899,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,97.1,58.4,62.2,99.4,47.5,-0.6,0.005,-0.016
+358,11.932,1,S4,Squat Deeper,,102.3,63.9,60.3,99.8,72.9,-11.3,0.003,-0.01
+359,11.966,1,S4,Squat Deeper,,108.2,70.8,57.9,100.1,96.2,-22.1,0.002,-0.006
+360,11.999,1,S4,Squat Deeper,,113.1,77.3,55.2,100.6,114.3,-33.9,-0.001,-0.002
+361,12.032,1,S4,Squat Deeper,,118.0,83.4,52.6,102.0,131.1,-45.2,-0.003,0.001
+362,12.066,1,S4,Squat Deeper,,122.8,90.4,49.1,101.9,141.6,-61.8,-0.01,0.017
+363,12.099,1,S4,Squat Deeper,,128.6,98.3,46.0,102.9,150.8,-75.3,-0.012,0.023
+364,12.132,1,S4,Squat Deeper,,133.4,105.0,43.4,103.1,155.4,-81.0,-0.013,0.03
+365,12.166,1,S4,Squat Deeper,,137.9,111.2,40.4,104.2,152.5,-85.2,-0.014,0.031
+366,12.199,1,S4,Squat Deeper,,141.1,117.1,37.1,105.0,141.3,-89.4,-0.013,0.031
+367,12.232,1,S4,Squat Deeper,,147.2,123.6,34.5,107.7,145.8,-88.5,-0.007,0.025
+368,12.266,1,S4,Squat Deeper,TORSO_SWING,154.7,131.8,31.1,110.6,157.4,-91.9,-0.005,0.024
+369,12.299,1,S4,Squat Deeper,,161.5,138.6,28.3,113.2,165.8,-89.3,-0.003,0.022
+370,12.332,1,S1,Standing - Start Your Squat,,167.1,144.8,25.5,114.8,165.0,-87.7,,
+371,12.366,1,S1,Standing - Start Your Squat,,170.0,150.1,22.6,114.5,157.2,-89.1,,
+372,12.399,1,S1,Standing - Start Your Squat,,171.3,153.6,20.3,113.9,143.2,-86.5,,
+373,12.432,1,S1,Standing - Start Your Squat,,174.8,158.7,17.7,114.5,144.1,-83.1,,
+374,12.466,1,S1,Standing - Start Your Squat,,177.7,162.9,15.7,115.1,130.9,-80.7,,
+375,12.499,1,S1,Standing - Start Your Squat,,178.1,165.3,14.0,115.0,100.4,-73.4,,
+376,12.532,1,S1,Standing - Start Your Squat,,177.9,167.1,12.6,114.1,70.4,-67.4,,
+377,12.566,1,S1,Standing - Start Your Squat,,177.6,168.5,11.3,113.5,44.7,-60.7,,
+378,12.599,1,S1,Standing - Start Your Squat,,176.8,169.4,10.4,112.8,28.9,-52.4,,
+379,12.632,1,S1,Standing - Start Your Squat,,175.9,169.3,10.0,112.6,19.6,-44.2,,
+380,12.666,1,S1,Standing - Start Your Squat,,174.9,168.6,9.9,112.5,0.4,-33.3,,
+381,12.699,1,S1,Standing - Start Your Squat,,174.0,168.1,9.9,112.6,-16.1,-25.0,,
+382,12.732,1,S1,Standing - Start Your Squat,,172.6,166.8,10.1,112.4,-23.7,-16.9,,
+383,12.766,1,S1,Standing - Start Your Squat,,171.2,165.1,10.8,112.2,-28.8,-7.8,,
+384,12.799,1,S1,Standing - Start Your Squat,,168.9,162.6,11.7,111.4,-36.9,1.6,,
+385,12.832,1,S2,Keep Descending,,163.8,157.5,13.5,109.2,-55.5,13.4,-0.001,0.012
+386,12.866,1,S2,Keep Descending,,159.7,152.2,16.1,107.4,-69.4,26.2,-0.002,0.013
+387,12.899,1,S2,Keep Descending,,155.7,145.7,19.6,105.8,-82.2,41.6,-0.002,0.017
+388,12.932,1,S2,Keep Descending,,152.3,140.0,22.8,104.7,-93.0,55.5,-0.002,0.019
+389,12.966,1,S2,Keep Descending,,147.2,131.8,27.0,103.8,-108.9,72.6,-0.003,0.021
+390,12.999,1,S2,Keep Descending,,143.2,124.3,31.0,104.1,-119.9,86.7,-0.002,0.02
+391,13.032,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,137.1,115.4,35.2,103.8,-136.7,100.6,0.005,0.013
+392,13.066,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,130.4,107.5,38.6,102.0,-143.3,107.7,0.007,0.011
+393,13.099,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,124.3,100.3,41.5,101.0,-151.9,108.8,0.008,0.011
+394,13.132,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,120.1,94.2,44.3,100.0,-152.4,105.7,0.008,0.012
+395,13.166,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,115.3,88.0,46.8,99.5,-158.3,102.7,0.009,0.011
+396,13.199,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,109.9,81.7,48.8,98.1,-159.8,93.3,0.003,0.015
+397,13.232,1,S2,Avoid Swinging - Stay Controlled,,104.4,75.7,50.9,98.1,-166.3,85.2,0.003,0.009
+398,13.266,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,99.0,70.3,52.4,97.3,-163.0,74.0,0.003,0.004
+399,13.299,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,94.3,64.7,54.8,95.6,-154.9,69.4,0.003,-0.0
+400,13.332,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,91.0,62.0,55.2,94.8,-142.5,58.7,0.004,-0.004
+401,13.366,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,87.9,59.4,55.6,94.2,-138.0,48.6,0.007,-0.009
+402,13.399,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.8,57.9,55.6,93.9,-126.4,37.7,0.008,-0.012
+403,13.432,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,84.2,56.9,55.5,93.4,-110.0,28.7,0.01,-0.014
+404,13.466,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.6,56.6,55.4,93.2,-89.3,19.3,0.011,-0.015
+405,13.499,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,83.8,57.6,54.9,93.1,-65.1,10.8,0.013,-0.018
+406,13.532,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.1,59.2,54.3,93.3,-39.3,-2.0,0.014,-0.018
+407,13.566,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,86.1,60.2,54.3,93.5,-21.1,-3.9,0.018,-0.022
+408,13.599,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,89.9,64.6,53.5,93.7,8.5,-9.3,0.018,-0.023
+409,13.632,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,94.6,70.1,52.2,94.2,37.8,-14.3,0.018,-0.023
+410,13.666,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,99.7,76.6,50.1,94.8,66.2,-23.2,0.012,-0.017
+411,13.699,1,S4,Squat Deeper,,105.1,83.5,47.3,95.8,92.1,-34.6,0.009,-0.01
+412,13.732,1,S4,Squat Deeper,,111.8,91.3,44.4,96.9,119.6,-45.1,0.009,0.001
+413,13.766,1,S4,Squat Deeper,,117.4,98.7,41.7,97.2,138.5,-54.0,0.009,0.01
+414,13.799,1,S4,Squat Deeper,,123.9,106.0,39.2,98.8,162.2,-64.6,0.009,0.012
+415,13.832,1,S4,Squat Deeper,,129.5,112.4,36.5,100.7,169.5,-72.5,0.007,0.014
+416,13.866,1,S4,Squat Deeper,,135.8,119.8,33.4,103.5,176.5,-80.8,0.003,0.014
+417,13.899,1,S4,Squat Deeper,,142.7,127.1,30.5,106.0,184.5,-83.9,0.002,0.013
+418,13.932,1,S4,Squat Deeper,,148.4,133.4,27.6,108.4,185.5,-84.3,0.005,0.008
+419,13.966,1,S4,Squat Deeper,,154.7,140.5,24.7,109.5,184.1,-84.7,0.005,0.004
+420,13.999,1,S4,Squat Deeper,,162.2,147.7,22.0,111.1,191.9,-84.6,0.003,0.002
+421,14.032,1,S1,Standing - Start Your Squat,,167.1,153.9,18.9,111.9,185.1,-86.8,,
+422,14.066,1,S1,Standing - Start Your Squat,,171.9,159.0,16.7,113.5,181.9,-85.1,,
+423,14.099,1,S1,Standing - Start Your Squat,,175.1,163.8,14.4,114.5,168.4,-81.3,,
+424,14.132,1,S1,Standing - Start Your Squat,,176.9,167.4,12.5,114.5,146.4,-77.3,,
+425,14.166,1,S1,Standing - Start Your Squat,,176.9,168.2,11.9,113.6,122.1,-67.5,,
+426,14.199,1,S1,Standing - Start Your Squat,,176.8,168.8,11.5,113.1,94.6,-56.7,,
+427,14.232,1,S1,Standing - Start Your Squat,,176.7,169.2,11.2,113.1,62.2,-46.1,,
+428,14.266,1,S1,Standing - Start Your Squat,,176.1,169.1,11.0,112.6,38.6,-34.0,,
+429,14.299,1,S1,Standing - Start Your Squat,,175.4,168.8,10.9,112.1,14.9,-24.6,,
+430,14.332,1,S1,Standing - Start Your Squat,,174.5,168.4,10.9,111.8,-2.3,-15.1,,
+431,14.366,1,S1,Standing - Start Your Squat,,174.1,168.1,10.9,111.4,-12.0,-6.6,,
+432,14.399,1,S1,Standing - Start Your Squat,,173.2,166.8,11.4,111.2,-15.7,-2.0,,
+433,14.432,1,S1,Standing - Start Your Squat,,171.0,162.9,13.1,111.3,-24.9,7.1,,
+434,14.466,1,S1,Standing - Start Your Squat,,168.6,158.5,15.2,111.2,-34.6,17.1,,
+435,14.499,1,S1,Standing - Start Your Squat,,166.2,155.4,16.6,110.3,-42.6,23.8,,
+436,14.532,1,S2,Keep Descending,,162.6,151.4,18.4,108.5,-54.6,32.1,-0.001,0.006
+437,14.566,1,S2,Keep Descending,,158.7,146.0,21.2,107.0,-68.0,44.0,-0.001,0.006
+438,14.599,1,S2,Keep Descending,,154.9,140.9,24.0,105.0,-82.2,56.1,-0.002,0.008
+439,14.632,1,S2,Keep Descending,,149.1,133.8,27.3,103.2,-103.1,68.2,-0.004,0.01
+440,14.666,1,S2,Keep Descending,,143.5,126.3,30.7,103.8,-117.8,75.5,-0.003,0.01
+441,14.699,1,S2,Keep Descending,,137.2,118.4,34.0,102.9,-134.8,80.6,-0.003,0.01
+442,14.732,1,S2,Keep Back Straight While Descending,,132.3,112.0,37.0,101.5,-145.3,87.6,-0.003,0.011
+443,14.766,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,126.0,104.4,40.3,100.7,-157.2,93.8,0.005,0.004
+444,14.799,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,119.7,97.6,43.0,99.3,-166.9,93.4,0.012,-0.003
+445,14.832,1,S2,Avoid Swinging - Stay Controlled,TORSO_SWING,114.1,91.1,45.6,97.3,-175.2,92.4,0.017,-0.007
+446,14.866,1,S2,Avoid Swinging - Stay Controlled,,108.6,84.7,48.1,96.3,-173.6,88.9,0.019,-0.013
+447,14.899,1,S2,Avoid Swinging - Stay Controlled,,101.2,76.7,50.9,94.8,-181.3,86.6,0.02,-0.018
+448,14.932,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,95.1,69.8,53.3,94.1,-180.2,82.8,0.023,-0.024
+449,14.966,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,90.5,64.3,55.1,93.7,-179.1,77.6,0.026,-0.027
+450,14.999,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,86.2,60.0,56.1,93.3,-170.6,67.6,0.031,-0.032
+451,15.032,1,S3,Avoid Swinging - Stay Controlled,LEAN_FORWARD,82.6,56.4,57.0,92.8,-159.3,60.0,0.033,-0.034
+452,15.066,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,80.5,54.2,57.2,92.9,-143.8,50.0,0.03,-0.037
+453,15.099,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,79.8,53.5,57.2,93.0,-123.7,39.1,0.029,-0.04
+454,15.132,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,79.5,52.9,57.7,93.1,-92.8,28.8,0.028,-0.044
+455,15.166,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,80.5,53.8,57.4,93.7,-62.7,17.2,0.027,-0.044
+456,15.199,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.0,55.4,57.0,94.4,-36.4,8.2,0.03,-0.049
+457,15.232,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,82.9,56.5,56.5,94.8,-14.1,1.7,0.031,-0.05
+458,15.266,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,85.8,59.2,56.5,95.6,13.9,-2.0,0.034,-0.053
+459,15.299,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,90.2,63.8,56.0,95.9,41.5,-5.4,0.035,-0.053
+460,15.332,1,S3,Lean Less Forward  (+1 more),LEAN_FORWARD,96.0,69.6,54.8,96.9,69.4,-10.4,0.032,-0.051
+461,15.366,1,S4,Lean Less Forward  (+1 more),,102.3,76.2,52.9,98.3,97.7,-20.2,0.031,-0.049
+462,15.399,1,S4,Lean Less Forward  (+1 more),,108.4,82.5,50.9,99.9,119.4,-27.8,0.017,-0.035
+463,15.432,1,S4,Lean Less Forward  (+1 more),,115.3,89.9,48.5,101.4,142.9,-36.6,0.007,-0.025
+464,15.465,1,S4,Lean Less Forward  (+1 more),,122.4,97.4,46.0,102.8,169.5,-45.0,0.005,-0.019
+465,15.499,1,S4,Lean Less Forward  (+1 more),,129.1,104.0,43.7,103.7,185.4,-54.7,0.002,-0.007
+466,15.532,1,S4,Lean Less Forward  (+1 more),,135.7,110.8,41.2,105.2,195.0,-63.3,0.0,-0.003
+467,15.565,1,S4,Lean Less Forward  (+1 more),,140.5,116.7,38.5,106.1,191.0,-69.7,-0.001,0.001
+468,15.599,1,S4,Lean Less Forward  (+1 more),,148.0,124.4,35.4,108.4,195.6,-75.1,-0.003,0.005
+469,15.632,1,S4,Lean Less Forward  (+1 more),,155.9,132.5,32.4,110.8,203.8,-79.2,-0.004,0.006
+470,15.665,1,S4,Lean Less Forward  (+1 more),,163.4,139.8,29.5,113.6,206.1,-81.5,-0.0,0.006
+471,15.699,1,S1,Standing - Start Your Squat,,168.6,145.0,27.5,115.3,198.0,-79.3,,
+472,15.732,1,S1,Standing - Start Your Squat,,171.7,149.2,25.2,115.3,182.4,-79.4,,
+473,15.765,1,S1,Standing - Start Your Squat,,174.2,153.5,22.9,115.0,165.0,-78.4,,
+474,15.799,1,S1,Standing - Start Your Squat,,176.3,157.2,20.8,114.7,153.6,-75.9,,
+475,15.832,1,S1,Standing - Start Your Squat,,177.9,159.9,19.3,114.6,128.3,-69.0,,
+476,15.865,1,S1,Standing - Start Your Squat,,179.1,161.8,18.2,115.0,99.3,-60.7,,
+477,15.899,1,S1,Standing - Start Your Squat,,179.1,162.7,17.3,115.2,67.2,-52.2,,
+478,15.932,1,S1,Standing - Start Your Squat,,178.6,163.2,16.6,115.3,42.6,-46.3,,
+479,15.965,1,S1,Standing - Start Your Squat,,177.9,163.1,16.3,115.6,26.6,-38.2,,
+480,15.999,1,S1,Standing - Start Your Squat,,177.5,163.2,16.1,115.6,14.1,-29.1,,
+481,16.032,1,S1,Standing - Start Your Squat,,176.8,162.7,16.2,115.4,1.9,-19.6,,
+482,16.065,1,S1,Standing - Start Your Squat,,175.7,161.4,16.6,114.6,-9.4,-11.7,,
+483,16.099,1,S1,Standing - Start Your Squat,,174.1,160.0,17.0,113.6,-21.4,-5.2,,
+484,16.132,1,S1,Standing - Start Your Squat,,171.2,157.2,17.9,112.4,-33.8,2.6,,
+485,16.165,1,S1,Standing - Start Your Squat,,168.0,153.7,19.2,110.8,-45.1,11.1,,
+486,16.199,1,S2,Keep Descending,,164.5,149.5,21.1,109.4,-57.3,20.4,-0.002,0.002
+487,16.232,1,S2,Keep Descending,,159.9,145.0,22.9,106.9,-75.5,29.2,-0.002,0.003
+488,16.265,1,S2,Keep Descending,,155.2,140.0,25.1,104.8,-92.7,37.9,-0.003,0.007
+489,16.299,1,S2,Keep Descending,,151.0,135.2,27.5,103.5,-105.8,46.5,-0.007,0.011
+490,16.332,1,S2,Keep Descending,,146.2,129.0,30.2,102.7,-119.4,56.8,-0.008,0.014
+491,16.365,1,S2,Keep Descending,,140.0,122.1,32.8,102.3,-133.8,64.0,0.006,0.0
+492,16.399,1,S2,Keep Back Straight While Descending,,133.7,115.2,35.3,101.2,-147.2,68.7,0.009,-0.003
+493,16.432,1,S2,Keep Back Straight While Descending,,127.8,108.5,38.0,100.3,-157.4,72.5,0.011,-0.008
+494,16.465,1,S2,Keep Back Straight While Descending,,120.9,101.0,41.1,98.7,-167.0,77.8,0.015,-0.01
+495,16.499,1,S2,Keep Back Straight While Descending,,115.4,95.1,43.4,97.5,-170.3,78.7,0.02,-0.014
+496,16.532,1,S2,Keep Back Straight While Descending,,110.4,89.7,45.5,96.0,-174.4,77.2,0.025,-0.018
+497,16.565,1,S2,Keep Back Straight While Descending,,105.2,84.3,47.4,95.6,-175.8,73.5,0.031,-0.021
+498,16.599,1,S3,Lean Less Forward,LEAN_FORWARD,98.5,77.9,49.4,94.7,-177.9,70.9,0.036,-0.025
+499,16.632,1,S3,Lean Less Forward,LEAN_FORWARD,93.5,71.8,51.9,94.6,-172.1,71.3,0.037,-0.03
+500,16.665,1,S3,Lean Less Forward,LEAN_FORWARD,89.6,66.2,54.4,94.8,-163.5,70.1,0.04,-0.037
+501,16.699,1,S3,Lean Less Forward,LEAN_FORWARD,86.0,61.6,55.8,94.6,-149.7,63.1,0.042,-0.041
+502,16.732,1,S3,Lean Less Forward,LEAN_FORWARD,82.9,58.3,56.6,94.0,-139.3,56.2,0.043,-0.043
+503,16.765,1,S3,Lean Less Forward,LEAN_FORWARD,81.0,55.4,57.4,93.5,-126.0,51.1,0.041,-0.044
+504,16.799,1,S3,Lean Less Forward,LEAN_FORWARD,79.1,53.4,57.6,93.2,-112.1,43.9,0.04,-0.045
+505,16.832,1,S3,Lean Less Forward,LEAN_FORWARD,79.1,52.8,57.8,94.0,-82.9,36.2,0.04,-0.045
+506,16.865,1,S3,Lean Less Forward,LEAN_FORWARD,79.1,52.4,58.1,94.4,-61.9,26.4,0.039,-0.045
+507,16.899,1,S3,Lean Less Forward,LEAN_FORWARD,79.0,53.0,57.6,94.5,-45.4,14.0,0.041,-0.048
+508,16.932,1,S3,Lean Less Forward,LEAN_FORWARD,80.1,54.6,57.0,94.7,-25.4,5.1,0.042,-0.05
+509,16.965,1,S3,Lean Less Forward,LEAN_FORWARD,80.6,55.6,56.1,94.8,-10.1,-1.8,0.04,-0.049
+510,16.999,1,S3,Lean Less Forward,LEAN_FORWARD,82.8,57.6,56.2,94.6,7.9,-5.2,0.04,-0.047
+511,17.032,1,S3,Lean Less Forward,LEAN_FORWARD,86.9,61.7,55.7,95.1,33.7,-8.4,0.042,-0.046
+512,17.065,1,S3,Lean Less Forward,LEAN_FORWARD,92.2,67.3,54.5,95.9,56.1,-14.5,0.037,-0.039
+513,17.099,1,S3,Lean Less Forward,LEAN_FORWARD,98.4,73.9,52.6,97.6,82.8,-23.4,0.035,-0.039
+514,17.132,1,S4,Lean Less Forward,,104.0,79.8,50.8,98.8,107.2,-29.2,0.026,-0.03
+515,17.165,1,S4,Lean Less Forward,,110.0,86.3,48.4,100.0,128.5,-36.5,0.021,-0.022
+516,17.199,1,S4,Lean Less Forward,,116.6,93.3,46.2,100.9,154.3,-42.8,0.02,-0.016
+517,17.232,1,S4,Lean Less Forward,,122.9,101.3,43.1,100.8,171.6,-56.0,0.017,-0.005
+518,17.265,1,S4,Lean Less Forward,,129.3,108.7,40.1,102.4,181.6,-66.7,0.016,-0.002
+519,17.299,1,S4,Lean Less Forward,,134.6,115.1,37.3,103.8,181.5,-73.5,0.014,0.002
+520,17.332,1,S4,Lean Less Forward,,140.2,120.9,34.8,105.9,179.3,-76.2,0.012,0.003
+521,17.365,1,S4,Lean Less Forward,,147.7,127.8,32.2,109.4,187.2,-79.7,0.011,0.0
+522,17.399,1,S4,Lean Less Forward,,153.6,133.9,29.7,111.1,186.6,-80.2,0.011,-0.0
+523,17.432,1,S4,Lean Less Forward,,160.7,139.9,27.7,113.1,188.9,-79.0,0.011,-0.0
+524,17.465,1,S1,Standing - Start Your Squat,,166.0,145.4,25.5,114.5,185.0,-75.4,,
+525,17.499,1,S1,Standing - Start Your Squat,,169.7,150.2,23.3,114.6,173.1,-72.1,,
+526,17.532,1,S1,Standing - Start Your Squat,,173.2,154.6,21.1,114.2,165.7,-69.3,,
+527,17.565,1,S1,Standing - Start Your Squat,,176.7,158.6,19.3,114.9,156.1,-66.8,,
+528,17.599,1,S1,Standing - Start Your Squat,,178.8,161.3,18.0,115.8,133.3,-61.2,,
+529,17.632,1,S1,Standing - Start Your Squat,,179.2,163.0,16.8,115.7,109.8,-55.6,,
+530,17.665,1,S1,Standing - Start Your Squat,,178.2,163.7,16.0,115.4,75.4,-50.4,,
+531,17.699,1,S1,Standing - Start Your Squat,,177.5,164.4,15.2,114.5,49.0,-44.3,,
+532,17.732,1,S1,Standing - Start Your Squat,,177.0,165.2,14.5,114.2,31.4,-37.9,,
+533,17.765,1,S1,Standing - Start Your Squat,,176.6,165.5,14.1,113.9,14.3,-30.4,,
+534,17.799,1,S1,Standing - Start Your Squat,,176.1,165.4,13.9,114.1,-2.6,-23.2,,
+535,17.832,1,S1,Standing - Start Your Squat,,174.9,164.8,13.9,113.3,-16.7,-17.6,,
+536,17.865,1,S1,Standing - Start Your Squat,,172.5,163.1,14.2,111.4,-28.8,-11.0,,
+537,17.899,1,S1,Standing - Start Your Squat,,170.7,161.7,14.6,110.4,-32.4,-6.1,,
+538,17.932,1,S1,Standing - Start Your Squat,,169.0,160.2,15.1,109.6,-36.2,-0.4,,
+539,17.965,1,S1,Standing - Start Your Squat,,167.7,158.9,15.7,109.0,-39.9,5.3,,
+540,17.999,1,S1,Standing - Start Your Squat,,166.8,157.8,16.3,108.5,-42.0,9.4,,
+541,18.032,1,S1,Standing - Start Your Squat,,166.4,157.0,16.9,108.6,-41.4,12.9,,
+542,18.065,1,S1,Standing - Start Your Squat,,166.3,156.4,17.4,108.6,-37.0,15.2,,
+543,18.099,1,S1,Standing - Start Your Squat,,166.2,156.0,17.7,108.7,-26.6,15.2,,
+544,18.132,1,S1,Standing - Start Your Squat,,166.5,155.7,18.2,108.7,-18.1,15.6,,
+545,18.165,1,S1,Standing - Start Your Squat,,166.8,155.9,18.3,109.6,-9.3,13.7,,
+546,18.199,1,S1,Standing - Start Your Squat,,167.4,156.3,18.3,110.1,-1.4,11.1,,
+547,18.232,1,S1,Standing - Start Your Squat,,167.9,157.0,18.1,110.5,5.0,7.8,,
+548,18.265,1,S1,Standing - Start Your Squat,,168.7,158.5,17.5,110.4,9.8,2.6,,
+549,18.299,1,S1,Standing - Start Your Squat,,169.4,159.6,17.0,110.5,13.5,-1.7,,
+550,18.332,1,S1,Standing - Start Your Squat,,170.3,161.2,16.3,111.3,17.2,-5.9,,
+551,18.365,1,S1,Standing - Start Your Squat,,171.2,162.8,15.6,111.7,20.2,-11.2,,
+552,18.399,1,S1,Standing - Start Your Squat,,171.8,164.2,14.9,112.1,21.1,-14.4,,
+553,18.432,1,S1,Standing - Start Your Squat,,171.9,164.7,14.6,112.4,19.6,-16.0,,
+554,18.465,1,S1,Standing - Start Your Squat,,172.0,164.8,14.5,112.6,17.3,-15.5,,
+555,18.499,1,S1,Standing - Start Your Squat,,171.9,164.8,14.4,112.9,13.9,-13.4,,
+556,18.532,1,S1,Standing - Start Your Squat,,172.1,165.0,14.2,112.9,11.5,-12.0,,
+557,18.565,1,S1,Standing - Start Your Squat,,171.9,165.1,14.0,112.7,7.0,-9.8,,
+558,18.599,1,S1,Standing - Start Your Squat,,171.4,165.3,13.7,112.4,1.0,-8.2,,
+559,18.632,1,S1,Standing - Start Your Squat,,170.6,165.1,13.4,111.7,-5.2,-6.5,,
+560,18.665,1,S1,Standing - Start Your Squat,,170.2,165.1,13.3,111.4,-7.6,-5.5,,
+561,18.699,1,S1,Standing - Start Your Squat,,170.0,165.4,12.9,111.3,-8.4,-6.8,,
+562,18.732,1,S1,Standing - Start Your Squat,,170.0,165.7,12.6,111.2,-8.4,-7.4,,
+563,18.765,1,S1,Standing - Start Your Squat,,170.0,165.8,12.5,111.5,-9.1,-7.5,,
+564,18.799,1,S1,Standing - Start Your Squat,,170.1,166.1,12.3,111.6,-7.9,-7.5,,
+565,18.832,1,S1,Standing - Start Your Squat,,170.2,166.4,12.2,111.7,-5.1,-6.4,,
+566,18.865,1,S1,Standing - Start Your Squat,,170.4,166.7,12.0,111.9,-0.6,-6.1,,
+567,18.899,1,S1,Standing - Start Your Squat,,170.7,167.3,11.8,112.0,2.5,-6.5,,
+568,18.932,1,S1,Standing - Start Your Squat,,171.2,168.1,11.4,112.3,5.1,-6.2,,
+569,18.965,1,S1,Standing - Start Your Squat,,171.5,168.6,11.1,112.7,6.5,-6.4,,
+570,18.999,1,S1,Standing - Start Your Squat,,171.8,169.2,10.9,112.6,7.8,-6.9,,
+571,19.032,1,S1,Standing - Start Your Squat,,171.9,169.5,10.7,112.5,7.7,-6.9,,
+572,19.065,1,S1,Standing - Start Your Squat,,171.9,169.6,10.6,112.5,7.4,-6.6,,
+573,19.099,1,S1,Standing - Start Your Squat,,172.0,170.1,10.4,112.4,6.9,-7.0,,
+574,19.132,1,S1,Standing - Start Your Squat,,172.1,170.3,10.2,112.2,5.9,-6.7,,
+575,19.165,1,S1,Standing - Start Your Squat,,171.9,170.5,10.1,111.7,3.1,-5.8,,
+576,19.199,1,S1,Standing - Start Your Squat,,171.7,170.7,9.9,111.2,0.8,-5.4,,
+577,19.232,1,S1,Standing - Start Your Squat,,171.2,170.7,9.7,110.8,-2.6,-5.2,,
+578,19.265,1,S1,Standing - Start Your Squat,,170.7,171.0,9.1,110.4,-4.8,-6.8,,
+579,19.299,1,S1,Standing - Start Your Squat,,170.1,171.3,8.5,110.1,-7.9,-9.2,,
+580,19.332,1,S1,Standing - Start Your Squat,,169.5,171.6,7.8,109.8,-11.0,-11.1,,
+581,19.365,1,S1,Standing - Start Your Squat,,168.9,171.6,7.2,109.7,-14.0,-13.0,,
+582,19.399,1,S1,Standing - Start Your Squat,,168.2,172.0,6.2,109.6,-15.9,-16.7,,
+583,19.432,1,S1,Standing - Start Your Squat,,167.6,172.2,5.4,110.2,-17.6,-19.1,,
+584,19.465,1,S1,Standing - Start Your Squat,,167.2,172.6,4.7,110.9,-17.0,-21.2,,
+585,19.499,1,S1,Standing - Start Your Squat,,167.1,173.3,3.8,110.8,-15.6,-22.5,,
+586,19.532,1,S1,Standing - Start Your Squat,,167.3,173.8,3.4,110.7,-11.8,-21.7,,
+587,19.565,1,S1,Standing - Start Your Squat,,167.4,174.5,2.9,110.8,-8.8,-21.2,,
+588,19.599,1,S1,Standing - Start Your Squat,,167.5,175.1,2.1,110.8,-6.1,-21.7,,
+589,19.632,1,S1,Standing - Start Your Squat,,168.0,175.8,1.5,111.2,-1.1,-20.0,,
+590,19.665,1,S1,Standing - Start Your Squat,,168.6,176.1,1.6,111.7,4.4,-16.6,,
+591,19.699,1,S1,Standing - Start Your Squat,,169.1,176.8,1.1,111.9,8.0,-15.4,,
+592,19.732,1,S1,Standing - Start Your Squat,,169.3,177.3,0.7,112.1,9.5,-13.6,,
+593,19.765,1,S1,Standing - Start Your Squat,,169.4,177.9,0.1,112.0,8.8,-14.1,,
+594,19.799,1,S1,Standing - Start Your Squat,,169.4,178.4,-0.3,111.8,8.6,-13.4,,
+595,19.832,1,S1,Standing - Start Your Squat,,169.5,178.7,-0.6,111.8,8.8,-11.7,,
+596,19.865,1,S1,Standing - Start Your Squat,,169.6,179.0,-0.9,112.0,7.0,-10.4,,
+597,19.898,1,S1,Standing - Start Your Squat,,169.9,179.4,-1.1,112.3,5.4,-11.4,,
+598,19.932,1,S1,Standing - Start Your Squat,,170.5,179.6,-1.5,112.8,5.9,-11.2,,
+599,19.965,1,S1,Standing - Start Your Squat,,171.0,179.4,-1.8,113.5,7.3,-10.7,,
+600,19.998,1,S1,Standing - Start Your Squat,,171.9,178.9,-2.0,114.2,10.7,-9.0,,
+601,20.032,1,S1,Standing - Start Your Squat,,172.6,178.6,-2.1,115.0,13.4,-7.7,,
+602,20.065,1,S1,Standing - Start Your Squat,,172.8,178.7,-2.1,115.8,14.3,-6.6,,
+603,20.098,1,S1,Standing - Start Your Squat,,172.7,178.4,-2.6,115.9,13.2,-7.1,,
+604,20.132,1,S1,Standing - Start Your Squat,,172.6,178.3,-2.8,116.0,11.8,-7.1,,
+605,20.165,1,S1,Standing - Start Your Squat,,172.6,178.4,-2.7,116.1,9.2,-5.3,,
+606,20.198,1,S1,Standing - Start Your Squat,,172.7,178.5,-2.7,116.4,7.2,-3.8,,
+607,20.232,1,S1,Standing - Start Your Squat,,172.9,178.6,-2.6,116.6,4.3,-2.7,,
+608,20.265,1,S1,Standing - Start Your Squat,,172.7,179.0,-2.4,116.9,0.4,-1.3,,
+609,20.298,1,S1,Standing - Start Your Squat,,172.4,179.5,-2.2,117.1,-1.6,-0.2,,
+610,20.332,1,S1,Standing - Start Your Squat,,172.1,179.3,-1.7,116.9,-2.4,3.6,,
+611,20.365,1,S1,Standing - Start Your Squat,,172.0,179.1,-1.5,116.5,-2.7,5.4,,
+612,20.398,1,S1,Standing - Start Your Squat,,171.7,178.3,-1.0,116.3,-3.8,7.5,,
+613,20.432,1,S1,Standing - Start Your Squat,,171.4,177.1,-0.3,116.4,-5.5,10.1,,
+614,20.465,1,S1,Standing - Start Your Squat,,171.3,176.1,0.3,116.4,-6.8,12.3,,
+615,20.498,1,S1,Standing - Start Your Squat,,171.0,174.9,1.2,116.0,-7.0,15.2,,
+616,20.532,1,S1,Standing - Start Your Squat,,170.7,173.8,1.9,115.5,-7.4,17.5,,
+617,20.565,1,S1,Standing - Start Your Squat,,170.1,172.5,2.6,114.7,-8.5,18.6,,
+618,20.598,1,S1,Standing - Start Your Squat,,169.7,171.6,3.2,114.2,-9.8,20.2,,
+619,20.632,1,S1,Standing - Start Your Squat,,169.2,170.2,3.9,114.1,-11.1,21.0,,
+620,20.665,1,S1,Standing - Start Your Squat,,169.6,169.7,4.5,114.4,-7.7,20.6,,
+621,20.698,1,S1,Standing - Start Your Squat,,169.8,169.0,5.1,114.4,-6.2,20.5,,
+622,20.732,1,S1,Standing - Start Your Squat,,169.9,167.9,5.9,114.7,-4.7,20.4,,
+623,20.765,1,S1,Standing - Start Your Squat,,170.1,166.7,6.9,115.5,-2.6,21.4,,
+624,20.798,1,S1,Standing - Start Your Squat,,170.4,165.7,7.8,116.0,1.2,22.4,,
+625,20.832,1,S1,Standing - Start Your Squat,,171.2,164.8,9.1,116.3,6.5,25.2,,
+626,20.865,1,S1,Standing - Start Your Squat,,172.0,163.2,10.7,116.8,12.2,29.1,,
+627,20.898,1,S1,Standing - Start Your Squat,,172.7,161.2,12.5,117.3,12.9,34.5,,
+628,20.932,1,S1,Standing - Start Your Squat,,173.6,159.7,14.3,117.8,16.2,39.4,,
+629,20.965,1,S1,Standing - Start Your Squat,,174.1,158.1,15.8,118.3,18.0,42.3,,
+630,20.998,1,S1,Standing - Start Your Squat,,173.8,155.6,17.7,118.7,15.9,46.3,,
+631,21.032,1,S1,Standing - Start Your Squat,,174.0,153.7,19.3,119.0,15.4,49.2,,
+632,21.065,1,S1,Standing - Start Your Squat,,174.0,151.9,20.9,118.6,12.0,50.7,,
+633,21.098,1,S1,Standing - Start Your Squat,,174.1,149.9,22.6,119.2,9.0,51.0,,
+634,21.132,1,S1,Standing - Start Your Squat,,174.3,147.7,24.4,120.4,7.0,51.1,,
+635,21.165,1,S1,Standing - Start Your Squat,,174.5,146.4,25.3,122.0,3.8,47.5,,
+636,21.198,1,S1,Standing - Start Your Squat,,174.3,145.2,26.0,122.7,1.0,43.7,,
+637,21.232,1,S1,Standing - Start Your Squat,,174.5,145.1,26.0,122.8,2.8,35.7,,
+638,21.265,1,S1,Standing - Start Your Squat,,174.7,145.5,25.9,122.8,3.1,28.1,,
+639,21.298,1,S1,Standing - Start Your Squat,,174.8,145.8,25.6,123.3,3.2,20.1,,
+640,21.332,1,S1,Standing - Start Your Squat,,174.9,146.8,25.0,122.8,3.6,10.3,,
+641,21.365,1,S1,Standing - Start Your Squat,,175.0,148.8,23.7,121.3,2.8,-3.4,,
+642,21.398,1,S1,Standing - Start Your Squat,,175.4,151.5,21.8,120.2,3.9,-15.3,,
+643,21.432,1,S1,Standing - Start Your Squat,,174.8,153.9,19.4,119.0,2.1,-28.1,,
+644,21.465,1,S1,Standing - Start Your Squat,,174.3,156.2,17.1,118.1,-0.7,-38.2,,
+645,21.498,1,S1,Standing - Start Your Squat,,174.6,159.0,15.1,117.7,-0.5,-46.3,,
+646,21.532,1,S1,Standing - Start Your Squat,,174.7,161.9,12.8,117.1,-0.1,-54.6,,
+647,21.565,1,S1,Standing - Start Your Squat,,174.3,164.9,10.4,116.4,-2.8,-62.8,,
+648,21.598,1,S1,Standing - Start Your Squat,,174.6,167.8,8.4,115.7,-1.7,-65.5,,
+649,21.632,1,S1,Standing - Start Your Squat,,174.8,170.5,6.6,115.0,-2.4,-65.2,,
+650,21.665,1,S1,Standing - Start Your Squat,,174.4,173.0,4.7,113.7,-2.1,-63.2,,
+651,21.698,1,S1,Standing - Start Your Squat,,173.0,174.2,3.3,112.5,-5.4,-59.4,,
+652,21.732,1,S1,Standing - Start Your Squat,,172.4,175.2,2.2,112.0,-9.5,-55.1,,
+653,21.765,1,S1,Standing - Start Your Squat,,172.0,175.9,1.5,112.4,-11.7,-48.8,,
+654,21.798,1,S1,Standing - Start Your Squat,,172.2,177.1,0.7,112.5,-8.8,-41.5,,
+655,21.832,1,S1,Standing - Start Your Squat,,172.4,177.7,0.1,113.1,-9.4,-35.7,,
+656,21.865,1,S1,Standing - Start Your Squat,,172.8,178.8,-0.6,113.3,-8.6,-30.7,,
+657,21.898,1,S1,Standing - Start Your Squat,,172.7,179.2,-1.1,114.1,-7.1,-24.5,,
+658,21.932,1,S1,Standing - Start Your Squat,,172.7,179.6,-1.3,114.3,-1.6,-19.7,,
+659,21.965,1,S1,Standing - Start Your Squat,,172.7,179.8,-1.7,114.3,1.2,-16.8,,
+660,21.998,1,S1,Standing - Start Your Squat,,172.6,179.7,-2.0,114.4,2.4,-14.8,,

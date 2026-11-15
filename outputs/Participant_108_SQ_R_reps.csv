@@ -1,0 +1,8 @@
+video,rep_id,start_s,end_s,label,errors,accuracy_pct,reached_depth,m_peak_descent_vel,m_peak_ascent_vel,m_peak_back_vel,m_bounce_in,m_bounce_out,m_descent_s,m_ascent_s,m_heel_lift_max,m_toe_lift_max,m_knee_toe_max,m_bottom_lean_shift,m_bottom_hip_shift
+Participant_108_SQ_R.mp4,1,2.366,3.766,incorrect,BOUNCE;LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,55.6,1,169.9,155.6,123.2,-87.8,64.0,0.7,0.7,0.035,0.069,0.086,4.8,-32.3
+Participant_108_SQ_R.mp4,2,4.133,5.499,incorrect,LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,76.2,1,147.1,183.3,94.4,-58.2,54.2,0.77,0.6,0.037,0.078,0.114,8.2,-22.8
+Participant_108_SQ_R.mp4,3,5.966,7.199,incorrect,BOUNCE;LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,71.6,1,179.9,193.8,109.5,-80.8,66.7,0.63,0.6,0.048,0.127,0.136,9.5,-33.3
+Participant_108_SQ_R.mp4,4,7.766,9.099,incorrect,LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,63.1,1,174.5,151.7,102.4,-68.5,54.9,0.63,0.7,0.048,0.031,0.128,9.7,-30.7
+Participant_108_SQ_R.mp4,5,9.599,10.899,incorrect,LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,59.0,1,164.3,158.8,103.3,-51.3,59.0,0.63,0.67,0.034,0.019,0.11,7.7,-26.3
+Participant_108_SQ_R.mp4,6,11.432,12.665,incorrect,LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,68.2,1,186.8,183.9,106.5,-48.1,74.5,0.63,0.6,0.043,0.034,0.18,10.1,-27.3
+Participant_108_SQ_R.mp4,7,13.099,14.299,incorrect,BOUNCE;LEAN_FORWARD;SQUAT_DEEPER;TORSO_SWING,78.4,1,194.1,190.1,104.5,-61.2,72.8,0.6,0.6,0.05,0.008,0.19,14.2,-33.6
