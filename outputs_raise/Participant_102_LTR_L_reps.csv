@@ -1,0 +1,13 @@
+video,rep_id,arm,start_s,end_s,label,errors,peak_angle,min_elbow_angle,reached_top,m_peak_lift_vel,m_peak_lower_vel,m_peak_torso_vel,m_lift_s,m_lower_s
+Participant_102_LTR_L.mp4,1,left,0.267,1.6,incorrect,FAST_LIFT,96.3,166.9,1,167.4,125.8,24.3,0.53,0.8
+Participant_102_LTR_L.mp4,2,left,2.733,4.0,correct,,90.6,161.2,1,127.8,134.4,24.4,0.63,0.63
+Participant_102_LTR_L.mp4,3,left,5.1,6.333,incorrect,FAST_LIFT,94.6,164.6,1,167.1,149.3,25.2,0.57,0.67
+Participant_102_LTR_L.mp4,4,left,7.433,8.733,correct,,93.7,160.4,1,142.5,123.6,27.7,0.53,0.77
+Participant_102_LTR_L.mp4,5,left,9.799,10.999,correct,,90.6,168.3,1,135.3,139.3,32.4,0.57,0.63
+Participant_102_LTR_L.mp4,6,left,12.566,13.666,incorrect,NOT_HIGH_ENOUGH,77.3,165.3,0,125.7,126.3,25.4,0.5,0.6
+Participant_102_LTR_L.mp4,7,left,14.499,15.766,correct,,93.6,166.3,1,145.2,145.3,18.8,0.63,0.63
+Participant_102_LTR_L.mp4,8,left,16.699,17.899,correct,,92.3,164.4,1,151.9,148.0,26.4,0.57,0.63
+Participant_102_LTR_L.mp4,9,left,19.232,20.366,incorrect,NOT_HIGH_ENOUGH,81.1,160.9,0,128.6,136.1,27.0,0.53,0.6
+Participant_102_LTR_L.mp4,10,left,21.865,23.032,incorrect,NOT_HIGH_ENOUGH,84.2,159.4,0,144.0,134.8,29.6,0.5,0.67
+Participant_102_LTR_L.mp4,11,left,24.065,25.232,correct,,89.8,165.5,1,153.5,138.3,29.4,0.53,0.63
+Participant_102_LTR_L.mp4,12,left,27.332,28.398,incorrect,NOT_HIGH_ENOUGH,81.4,161.2,0,152.0,162.0,24.0,0.53,0.53

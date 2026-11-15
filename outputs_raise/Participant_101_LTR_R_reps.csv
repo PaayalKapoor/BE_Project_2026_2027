@@ -1,0 +1,5 @@
+video,rep_id,arm,start_s,end_s,label,errors,peak_angle,min_elbow_angle,reached_top,m_peak_lift_vel,m_peak_lower_vel,m_peak_torso_vel,m_lift_s,m_lower_s
+Participant_101_LTR_R.mp4,1,right,2.267,4.166,incorrect,ELBOW_BENT;UNEVEN_RAISE,93.9,155.8,1,168.0,83.7,6.0,0.7,1.2
+Participant_101_LTR_R.mp4,2,right,8.366,10.299,incorrect,ELBOW_BENT,92.1,151.8,1,119.2,79.8,4.5,0.73,1.2
+Participant_101_LTR_R.mp4,3,right,11.199,13.199,incorrect,ELBOW_BENT;TOO_HIGH,101.7,155.7,1,129.3,95.5,7.2,0.77,1.23
+Participant_101_LTR_R.mp4,4,right,14.266,16.232,incorrect,ELBOW_BENT;UNEVEN_RAISE,96.3,145.7,1,121.3,84.3,8.9,0.87,1.1

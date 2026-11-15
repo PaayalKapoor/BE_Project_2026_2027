@@ -1,0 +1,7 @@
+video,rep_id,arm,start_s,end_s,label,errors,peak_angle,min_elbow_angle,reached_top,m_peak_lift_vel,m_peak_lower_vel,m_peak_torso_vel,m_lift_s,m_lower_s,m_torso_tilt_max,m_torso_tilt_shift
+Sayalee_LTR_L.mp4,1,left,1.033,3.033,incorrect,TOO_HIGH,102.3,168.2,1,107.6,105.7,12.4,1.0,1.0,6.5,5.8
+Sayalee_LTR_L.mp4,2,left,4.333,6.166,correct,,93.2,168.2,1,100.3,114.9,15.0,0.97,0.87,10.6,7.8
+Sayalee_LTR_L.mp4,3,left,7.199,8.999,incorrect,TOO_HIGH,108.0,166.6,1,128.1,123.7,17.3,0.83,0.97,9.5,7.1
+Sayalee_LTR_L.mp4,4,left,10.332,11.966,incorrect,TOO_HIGH,101.2,165.3,1,123.3,122.3,18.5,0.77,0.87,9.8,6.8
+Sayalee_LTR_L.mp4,5,left,13.332,15.099,incorrect,TOO_HIGH;TORSO_LEAN,100.8,167.8,1,117.1,117.6,17.9,0.93,0.83,11.3,9.1
+Sayalee_LTR_L.mp4,6,left,16.799,18.332,incorrect,TORSO_LEAN;TORSO_SWING,89.5,169.0,1,116.9,135.4,31.1,0.8,0.73,17.5,14.1

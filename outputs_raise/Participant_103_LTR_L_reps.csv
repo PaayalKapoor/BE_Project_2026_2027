@@ -1,0 +1,16 @@
+video,rep_id,arm,start_s,end_s,label,errors,peak_angle,min_elbow_angle,reached_top,m_peak_lift_vel,m_peak_lower_vel,m_peak_torso_vel,m_lift_s,m_lower_s,m_torso_tilt_max,m_torso_tilt_shift
+Participant_103_LTR_L.mp4,1,left,0.767,2.566,correct,,100.8,167.9,1,148.8,102.1,8.2,0.67,1.13,3.7,2.8
+Participant_103_LTR_L.mp4,2,left,3.633,5.4,incorrect,ELBOW_BENT;TOO_HIGH,105.4,152.9,1,134.9,112.0,5.9,0.73,1.03,2.0,1.7
+Participant_103_LTR_L.mp4,3,left,6.533,8.333,incorrect,TOO_HIGH,101.0,158.5,1,124.6,104.8,2.8,0.73,1.07,2.0,1.4
+Participant_103_LTR_L.mp4,4,left,9.499,11.333,incorrect,TOO_HIGH,105.0,162.7,1,111.3,115.3,3.8,0.83,1.0,2.1,2.0
+Participant_103_LTR_L.mp4,5,left,12.533,14.499,incorrect,ELBOW_BENT;TOO_HIGH,103.8,154.1,1,112.2,93.7,6.1,0.83,1.13,1.9,2.6
+Participant_103_LTR_L.mp4,6,left,15.866,17.732,incorrect,ELBOW_BENT;TOO_HIGH,105.2,154.8,1,143.7,106.2,5.1,0.77,1.1,1.5,0.8
+Participant_103_LTR_L.mp4,7,left,18.865,20.865,incorrect,TOO_HIGH,106.1,154.0,1,126.3,106.5,4.5,0.83,1.17,2.4,1.7
+Participant_103_LTR_L.mp4,8,left,22.065,24.165,incorrect,TOO_HIGH,103.7,155.5,1,123.6,78.1,2.8,0.8,1.3,2.0,1.2
+Participant_103_LTR_L.mp4,9,left,25.698,27.465,incorrect,ELBOW_BENT,100.0,158.2,1,121.8,109.6,4.9,0.77,1.0,3.2,2.6
+Participant_103_LTR_L.mp4,10,left,28.865,30.998,incorrect,TOO_HIGH,105.6,158.1,1,109.5,86.8,3.9,0.9,1.23,2.4,1.8
+Participant_103_LTR_L.mp4,11,left,32.498,34.431,incorrect,ELBOW_BENT;TOO_HIGH,102.9,157.0,1,133.2,92.7,6.7,0.7,1.23,3.0,2.3
+Participant_103_LTR_L.mp4,12,left,36.098,38.031,correct,,99.2,162.5,1,120.1,92.2,4.2,0.77,1.17,2.8,1.8
+Participant_103_LTR_L.mp4,13,left,39.631,41.497,correct,,100.8,166.5,1,109.3,114.2,4.6,0.83,1.03,3.0,2.0
+Participant_103_LTR_L.mp4,14,left,43.597,45.43,incorrect,TOO_HIGH,101.5,159.1,1,132.7,109.6,3.6,0.8,1.03,2.5,1.4
+Participant_103_LTR_L.mp4,15,left,46.797,48.93,incorrect,ELBOW_BENT;TOO_HIGH,101.4,156.7,1,127.9,88.5,4.1,0.77,1.37,2.2,1.4
