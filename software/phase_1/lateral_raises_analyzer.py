@@ -31,7 +31,7 @@ MODEL_URL = (
     "pose_landmarker/pose_landmarker_heavy/float16/latest/"
     "pose_landmarker_heavy.task"
 )
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Lateral_Raises\Sayalee_LTR_L.mp4"
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Lateral_Raises\Participant_102_LTR_L.mp4"
 
 # MediaPipe pose landmark indices (person's own left/right, video NOT mirrored)
 L_SHOULDER, R_SHOULDER = 11, 12
@@ -46,7 +46,8 @@ REST_EXIT = 25         # ...below this = back at rest (rep ends); gap avoids cha
 TOP_MIN = 85           # must reach this to be a full rep
 TOP_MAX = 100          # above this = raised too high
 PARTIAL_MIN_PEAK = 55  # a rise that never exceeds this is ignored (just a wobble)
-ELBOW_MIN = 160        # elbow angle below this = elbow bent
+ELBOW_MIN = 150      # elbow angle below this = elbow bent
+ELBOW_MID = 170
 ELBOW_CHECK_MIN = 40   # only judge the elbow once the arm is clearly raised
 SYM_MAX_DIFF = 15      # left/right shoulder-angle difference allowed
 ERR_MIN_FRAMES = 5     # an error must persist this many CONSECUTIVE frames to flag the rep (1 = flag instantly)
@@ -58,6 +59,7 @@ VEL_ERR_MIN_FRAMES = 3  # velocity-based errors need fewer consecutive frames: t
 VEL_WINDOW_S = 0.2     # velocities are measured over this many seconds (less noise, independent of fps)
 FAST_LIFT_VEL = 150    # deg/s: shoulder angle rising faster than this   -> FAST_LIFT  (jerked up with momentum)
 FAST_LOWER_VEL = 150   # deg/s: shoulder angle falling faster than this  -> FAST_LOWER (dropped, not controlled)
+LOWER_MIN_S = 1.0      # s: lowering (peak -> back at rest) shorter than this = not controlled -> LOWERED_TOO_QUICKLY (PLACEHOLDER - tune with m_lower_s)
 TORSO_SWING_VEL = 30   # deg/s: side-to-side torso tilt changing faster than this -> TORSO_SWING (body English)
 VEL_MSG = {"FAST_LIFT": "TOO FAST - control the lift", "FAST_LOWER": "TOO FAST - control the lowering",
            "TORSO_SWING": "BODY SWING - keep torso still"}
@@ -198,6 +200,8 @@ class RepCounter:
             self.min_elbow = min(self.min_elbow, elbow)
             if elbow < ELBOW_MIN:
                 frame_errs.append("ELBOW_BENT")
+            if elbow > ELBOW_MID:
+                frame_errs.append("ELBOW_STRAIGHT")
         if lean_now:
             frame_errs.append("TORSO_LEAN")
         if angle > TOP_MAX:
@@ -235,6 +239,8 @@ class RepCounter:
         if not reached and self.peak < PARTIAL_MIN_PEAK:
             return                                          # wobble, not a rep attempt
         errs = sorted(c for c, n in self.err_max.items() if n >= (VEL_ERR_MIN_FRAMES if c in VEL_MSG else ERR_MIN_FRAMES))
+        if reached and t - self.peak_t < LOWER_MIN_S:
+            errs = sorted(set(errs) | {"LOWERED_TOO_QUICKLY"})
         if not reached:
             errs = ["NOT_HIGH_ENOUGH"]
         self.attempts += 1
@@ -365,10 +371,11 @@ def hex_bgr(h):
 STATE_BGR = {k: hex_bgr(v) for k, v in STATE_HEX.items()}
 
 # what the live message says for each error (priority order = which one is shown first)
-LIVE_PRIORITY = ["ELBOW_BENT", "TOO_HIGH", "FAST_LIFT", "FAST_LOWER", "TORSO_LEAN", "TORSO_SWING"]
+LIVE_PRIORITY = ["ELBOW_BENT", "TOO_HIGH", "FAST_LIFT", "FAST_LOWER", "TORSO_LEAN", "TORSO_SWING", "ELBOW_STRAIGHT"]
 LIVE_MSG = {"ELBOW_BENT": "Keep Your Elbows Straight", "TOO_HIGH": "Do Not Raise Above Shoulder Height",
             "FAST_LIFT": "Too Fast - Control The Lift",
-            "FAST_LOWER": "Too Fast - Control The Lowering", "TORSO_SWING": "Keep Your Body Still", "TORSO_LEAN": "Do Not Lean Sideways - Stay Upright"}
+            "FAST_LOWER": "Too Fast - Control The Lowering", "TORSO_SWING": "Keep Your Body Still", "TORSO_LEAN": "Do Not Lean Sideways - Stay Upright",
+            "ELBOW_STRAIGHT": "Elbow Straight: Bend the Elbow Slightly"}
 
 
 def put_text_shadow(img, text, pos, scale, color, thickness=1, shadow=True):

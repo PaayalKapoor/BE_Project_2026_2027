@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score, recall_score, precision_score, accuracy_sc
 from sklearn.model_selection import StratifiedGroupKFold
 from sklearn.preprocessing import StandardScaler
 import xgboost as xgb
+import joblib
 
 #Since the dataset is very imbalanced. 153 heel lift reps, 19 velocity reps and 220 correct reps - the model will not be able to learn the velocity error 
 #and generalise on new data. Therefore, we split the multiclass model into two binary classification models
@@ -84,8 +85,8 @@ def train_binary_model(df, target_label, other_label):
 
 print("Heel Lift Model")
 heel_model, heel_metrics = train_binary_model(df, 'label_heel_lift', 'label_speed_error')
+joblib.dump(heel_model, "heel_model_xgb.joblib")
 
 print("Velocity Error Model")
-velocity_model, velocity_metrics = train_binary_model(
-    df, 'label_speed_error', 'label_heel_lift',
-)
+velocity_model, velocity_metrics = train_binary_model(df, 'label_speed_error', 'label_heel_lift',)
+joblib.dump(velocity_model, "velocity_model_xgb.joblib")
