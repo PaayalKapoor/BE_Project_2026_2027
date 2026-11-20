@@ -31,7 +31,7 @@ MODEL_URL = (
     "pose_landmarker/pose_landmarker_heavy/float16/latest/"
     "pose_landmarker_heavy.task"
 )
-VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Lateral_Raises\Participant_102_LTR_L.mp4"
+VIDEO_PATH = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Phase_1\Lateral_Raises\Sayalee_LTR_R.mp4"
 
 # MediaPipe pose landmark indices (person's own left/right, video NOT mirrored)
 L_SHOULDER, R_SHOULDER = 11, 12
@@ -43,24 +43,24 @@ ARM_IDX = {"LEFT": (L_HIP, L_SHOULDER, L_ELBOW, L_WRIST),
 
 REST_ENTER = 30        # shoulder angle above this = arm leaves rest (rep starts)
 REST_EXIT = 25         # ...below this = back at rest (rep ends); gap avoids chatter around one value
-TOP_MIN = 85           # must reach this to be a full rep
-TOP_MAX = 100          # above this = raised too high
+TOP_MIN = 92           # must reach this to be a full rep
+TOP_MAX = 105          # above this = raised too high
 PARTIAL_MIN_PEAK = 55  # a rise that never exceeds this is ignored (just a wobble)
 ELBOW_MIN = 150      # elbow angle below this = elbow bent
-ELBOW_MID = 170
+ELBOW_MID = 175
 ELBOW_CHECK_MIN = 40   # only judge the elbow once the arm is clearly raised
 SYM_MAX_DIFF = 15      # left/right shoulder-angle difference allowed
 ERR_MIN_FRAMES = 5     # an error must persist this many CONSECUTIVE frames to flag the rep (1 = flag instantly)
-TORSO_TILT_MAX = 8     # deg: tilt away from its value at the start of the rep, above this -> TORSO_LEAN (PLACEHOLDER - tune with m_torso_tilt_shift)
+TORSO_TILT_MAX = 5.65     # deg: tilt away from its value at the start of the rep, above this -> TORSO_LEAN (PLACEHOLDER - tune with m_torso_tilt_shift)
 
 # ---- momentum / swing detection.  These numbers are PLACEHOLDERS: tune them on your own videos
 # ---- (the m_* columns in the reps CSV are there for exactly that - see compare_labels.py)
 VEL_ERR_MIN_FRAMES = 3  # velocity-based errors need fewer consecutive frames: the velocity is already averaged over VEL_WINDOW_S
 VEL_WINDOW_S = 0.2     # velocities are measured over this many seconds (less noise, independent of fps)
-FAST_LIFT_VEL = 150    # deg/s: shoulder angle rising faster than this   -> FAST_LIFT  (jerked up with momentum)
+FAST_LIFT_VEL = 142    # deg/s: shoulder angle rising faster than this   -> FAST_LIFT  (jerked up with momentum)
 FAST_LOWER_VEL = 150   # deg/s: shoulder angle falling faster than this  -> FAST_LOWER (dropped, not controlled)
-LOWER_MIN_S = 1.0      # s: lowering (peak -> back at rest) shorter than this = not controlled -> LOWERED_TOO_QUICKLY (PLACEHOLDER - tune with m_lower_s)
-TORSO_SWING_VEL = 30   # deg/s: side-to-side torso tilt changing faster than this -> TORSO_SWING (body English)
+LOWER_MIN_S = 0.985     # s: lowering (peak -> back at rest) shorter than this = not controlled -> LOWERED_TOO_QUICKLY (PLACEHOLDER - tune with m_lower_s)
+TORSO_SWING_VEL = 8.95   # deg/s: side-to-side torso tilt changing faster than this -> TORSO_SWING (body English)
 VEL_MSG = {"FAST_LIFT": "TOO FAST - control the lift", "FAST_LOWER": "TOO FAST - control the lowering",
            "TORSO_SWING": "BODY SWING - keep torso still"}
 ALPHA = 0.3            # smoothing weight of previous value
@@ -198,10 +198,10 @@ class RepCounter:
         frame_errs = []
         if elbow is not None and angle >= ELBOW_CHECK_MIN:
             self.min_elbow = min(self.min_elbow, elbow)
-            if elbow < ELBOW_MIN:
-                frame_errs.append("ELBOW_BENT")
-            if elbow > ELBOW_MID:
-                frame_errs.append("ELBOW_STRAIGHT")
+            #if elbow < ELBOW_MIN:
+                #frame_errs.append("ELBOW_BENT")
+            #if elbow > ELBOW_MID:
+                #frame_errs.append("ELBOW_STRAIGHT")
         if lean_now:
             frame_errs.append("TORSO_LEAN")
         if angle > TOP_MAX:

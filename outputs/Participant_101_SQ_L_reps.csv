@@ -1,8 +1,0 @@
-video,rep_id,start_s,end_s,label,errors,accuracy_pct,reached_depth,m_peak_descent_vel,m_peak_ascent_vel,m_peak_back_vel,m_bounce_in,m_bounce_out,m_descent_s,m_ascent_s,m_heel_lift_max,m_toe_lift_max,m_knee_toe_max,m_bottom_lean_shift,m_bottom_hip_shift
-Participant_101_SQ_L.mp4,1,0.0,1.6,correct,,88.9,1,163.9,169.6,66.4,-47.5,30.6,0.77,0.83,0.059,0.044,0.146,9.3,-25.9
-Participant_101_SQ_L.mp4,2,2.166,3.866,correct,,88.7,1,163.0,174.9,55.8,-29.7,53.7,0.93,0.77,0.075,0.011,0.092,5.8,-19.3
-Participant_101_SQ_L.mp4,3,4.433,6.199,correct,,90.6,1,188.8,141.2,55.1,-80.8,30.9,0.7,1.07,0.062,0.049,0.117,6.5,-29.5
-Participant_101_SQ_L.mp4,4,6.333,7.932,correct,,87.8,1,178.2,182.9,71.5,-82.3,39.1,0.83,0.77,0.077,0.057,0.123,10.2,-33.1
-Participant_101_SQ_L.mp4,5,8.499,9.932,correct,,90.4,1,163.5,208.2,68.5,-50.2,79.3,0.8,0.63,0.049,0.05,0.134,4.2,-19.5
-Participant_101_SQ_L.mp4,6,10.565,12.065,correct,,87.6,1,175.1,203.8,68.1,-64.7,50.7,0.77,0.73,0.063,0.021,0.126,9.6,-31.5
-Participant_101_SQ_L.mp4,7,12.865,14.165,incorrect,FAST_DESCENT,91.6,1,213.9,201.2,44.6,-81.7,40.6,0.63,0.67,0.046,0.012,0.163,6.3,-29.5

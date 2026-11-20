@@ -80,13 +80,15 @@ def train_binary_model(df, target_label, other_label):
     print(f"\nTop 10 features for {target_label}:")
     print(importances.sort_values(ascending=False).head(10))
 
-    return final_model, metrics_df
+    return final_model, metrics_df, final_scaler
 
 
 print("Heel Lift Model")
-heel_model, heel_metrics = train_binary_model(df, 'label_heel_lift', 'label_speed_error')
+heel_model, heel_metrics, heel_scaler = train_binary_model(df, 'label_heel_lift', 'label_speed_error')
 joblib.dump(heel_model, "heel_model_xgb.joblib")
+joblib.dump(heel_scaler, 'heel_scaler.joblib')
 
 print("Velocity Error Model")
-velocity_model, velocity_metrics = train_binary_model(df, 'label_speed_error', 'label_heel_lift',)
+velocity_model, velocity_metrics, velocity_scaler = train_binary_model(df, 'label_speed_error', 'label_heel_lift',)
 joblib.dump(velocity_model, "velocity_model_xgb.joblib")
+joblib.dump(velocity_scaler, 'velocity_scaler.joblib')

@@ -16,7 +16,7 @@ What it prints:
   2. binary correct/incorrect, RAW - with the always-guess-majority baseline next to it
   3. binary again SCOPED - errors the system cannot detect (--undetectable) removed from the trainer's labels
   4. per participant/video agreement, the disagreements, and a per-error table
-  5. tuning table: the system's m_* metrics grouped by what the trainer said
+  5. tuning table: the system's m_* metrics grouped by what the trainer said  (then run tune_thresholds.py)
 """
 import argparse
 import os
@@ -27,6 +27,10 @@ import pandas as pd
 # trainer's words -> code.  First match wins, matched on the lower-cased text.  Edit freely.
 TERM_MAP = [
     ("neck", "NECK_DOWN"), ("destab", "UNSTABLE"), ("unstab", "UNSTABLE"),
+    ("lock", "ELBOW_STRAIGHT"), ("straight", "ELBOW_STRAIGHT"), ("hyperext", "ELBOW_STRAIGHT"),   # lateral raise: BEFORE the generic "elbow" below
+    ("sideways", "TORSO_LEAN"), ("torso", "TORSO_LEAN"),                                         # lateral raise: BEFORE the squat "lean" below
+    ("lowered", "LOWERED_TOO_QUICKLY"), ("quick", "LOWERED_TOO_QUICKLY"),
+    ("incomplete", "NOT_HIGH_ENOUGH"),                                                          # trainer's INCOMPLETE_ROM
     ("toe", "TOE_LIFT"), ("heel", "HEEL_LIFT"),
     ("lean", "LEAN_FORWARD"), ("swing", "TORSO_SWING"), ("momentum", "TORSO_SWING"),
     ("deeper", "SQUAT_DEEPER"), ("shallow", "SHALLOW"), ("bounce", "BOUNCE"),
@@ -36,7 +40,10 @@ TERM_MAP = [
 ]
 KNOWN_CODES = {c for _, c in TERM_MAP} | {
     "FAST_LIFT", "FAST_LOWER", "HIP_FLEXION", "ANKLE_MOBILITY", "HIPS_BACK", "WEIGHT_BACK", "BUTT_WINK",
-    "BACK_KNEE_HIGH", "BACK_KNEE_LOW", "UNEVEN_RAISE", "OTHER"}
+    "BACK_KNEE_HIGH", "BACK_KNEE_LOW", "UNEVEN_RAISE", "ELBOW_STRAIGHT", "TORSO_LEAN", "LOWERED_TOO_QUICKLY", "OTHER"}
+
+
+EXTRA_METRICS = ("peak_angle", "min_elbow_angle")      # non-m_ columns that are also useful for tuning
 
 
 def norm_video(s):
@@ -124,9 +131,13 @@ def main():
     ap.add_argument("--min-iou", type=float, default=0.3)
     ap.add_argument("--undetectable", default="NECK_DOWN,UNSTABLE",
                     help="comma-separated codes the system cannot detect (used for the SCOPED comparison)")
+    ap.add_argument("--ignore-codes", default="",
+                    help="comma-separated SYSTEM codes that should not count against a rep - shows what the binary "
+                         "result would be without them (no need to re-run the videos), e.g. ELBOW_BENT")
     ap.add_argument("--out", default="outputs/matched_reps.csv")
     a = ap.parse_args()
     UND = {c.strip().upper() for c in a.undetectable.split(",") if c.strip()}
+    IGN = {c.strip().upper() for c in a.ignore_codes.split(",") if c.strip()}
 
     pred = pd.read_csv(a.pred)
     trn = pd.read_csv(a.trainer)
@@ -163,7 +174,7 @@ def main():
     else:
         pred["key"], trn["key"] = pred["v"], trn["v"]
 
-    mcols = [c for c in pred.columns if c.startswith("m_")]
+    mcols = [c for c in pred.columns if c.startswith("m_") or c in EXTRA_METRICS]
     matched, n_fp, n_fn = [], 0, 0
     for k in sorted(trn["key"].unique()):                    # only videos (and arms) the trainer annotated
         p, t = pred[pred.key == k], trn[trn.key == k]
@@ -210,6 +221,11 @@ def main():
         print(f"  ({only} reps had ONLY those errors, so they count as 'correct' here.  The system can't see these errors,")
         print("   so this separates 'cannot detect' from 'detects badly' - report it NEXT TO the raw numbers, never instead.)")
 
+    if IGN:
+        s_inc = m.sys_errors.map(lambda x: len(errset(x) - IGN) > 0)
+        binary_report(f"BINARY - RAW again, but the system's {', '.join(sorted(IGN))} flags do NOT count against a rep",
+                      s_inc, tr_inc)
+
     # --- 4. per video, disagreements, per error
     g = (m.assign(sys_inc=sys_inc, tr_inc=tr_inc, agree=sys_inc == tr_inc)
           .groupby(["video", "arm"] if use_arm else "video")
@@ -242,7 +258,7 @@ def main():
         print("  (if the trainer lists only the MAIN errors of a rep, FP counts above are inflated - ask whether the lists are complete)")
 
     # --- 5. threshold tuning: system metrics grouped by what the trainer said
-    mc = [c for c in m.columns if c.startswith("m_")]
+    mc = [c for c in m.columns if c.startswith("m_") or c in EXTRA_METRICS]
     if mc:
         num = m[mc].apply(pd.to_numeric, errors="coerce")
         masks = {"trainer: correct": ~tr_inc}
