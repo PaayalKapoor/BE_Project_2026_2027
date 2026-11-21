@@ -14,6 +14,8 @@ import argparse
 import csv
 import glob
 import os
+import threading
+import time
 import urllib.request
 from collections import deque
 
@@ -45,11 +47,12 @@ STAND_KNEE = 155        # knee angle above this = standing
 PARTIAL_MIN_KNEE = 130  # a rep that never goes below this is ignored (just a wobble)
 ALPHA = 0.3             # smoothing weight of previous value
 VIS_MIN = 0.6
-ERR_MIN_FRAMES = 5      # an error must persist this many CONSECUTIVE frames to flag the rep (1 = old behaviour)
+ERR_MIN_S = 0.12       # an error must persist this many CONSECUTIVE frames to flag the rep (1 = old behaviour)
 
 # ---- momentum / swing detection.  The four numbers below are PLACEHOLDERS: tune them on your own
 # ---- videos (the m_* columns in the reps CSV are there for exactly that - see compare_labels.py)
-VEL_ERR_MIN_FRAMES = 3  # velocity-based errors need fewer consecutive frames: the velocity is already averaged over VEL_WINDOW_S
+VEL_ERR_MIN_S = 0.05    # velocity-based errors need less time: the velocity is already averaged over VEL_WINDOW_S (= 3 frames at 30 fps)
+GAP_BREAK_S = 1.0       # two frames further apart than this (stall / dropped frames) are not one continuous error 
 VEL_WINDOW_S = 0.2      # velocities are measured over this many seconds (less noise, independent of fps)
 FAST_DESCENT_VEL = 200  # deg/s: knee angle closing faster than this            -> FAST_DESCENT
 TORSO_SWING_VEL = 90    # deg/s: back-lean angle changing faster than this      -> TORSO_SWING
@@ -57,6 +60,14 @@ BOUNCE_VEL = 60         # deg/s: still this fast going INTO the bottom and back 
 BOUNCE_WIN_S = 0.2      # window either side of the bottom used for the bounce check
 VEL_MSG = {"FAST_DESCENT": "Too Fast - Control The Descent",
            "TORSO_SWING": "Avoid Swinging - Stay Controlled"}
+def min_run_s(code):
+    """How long (seconds) an error must last without a break to count for the rep."""
+    return VEL_ERR_MIN_S if code in VEL_MSG else ERR_MIN_S
+
+
+# ---- live stream settings (used when --source is a webcam index or a network stream)
+CAM_WIDTH, CAM_HEIGHT, CAM_FPS = 1280, 720, 30   # asked from the webcam (it may give something close)
+MAX_READ_FAILS = 60                              # this many failed reads in a row = camera / stream lost, end the session
 
 # ---- heel lift: heel rising above its flat-foot position for ERR_MIN_FRAMES consecutive frames
 TOE_LIFT_RATIO = 0.08    # toe rise relative to the heel, as a fraction of shank length -> TOE_LIFT   (PLACEHOLDER - tune it)
@@ -91,6 +102,7 @@ ADVISORY_ERRORS = set()
 window_name = "PowerPulse - Squat Analyzer"
 summary_window_name = "Squat Summary"
 stop_flag = False
+live_mode = False  # True while analysing a webcam / stream (no pause)
 stop_button_rect = [0, 0, 0, 0]
 summary_close_flag = False
 summary_close_rect = (200, 130, 310, 175)
@@ -172,7 +184,7 @@ def present(disp, show):
     key = cv2.waitKey(1) & 0xFF
     if key in (ord('q'), 27):
         return True
-    if key == ord(' '):                                  # space = pause / resume
+    if key == ord(' ') and not live_mode:                # space = pause / resume (not for a live stream: frames would pile up)                                  # space = pause / resume
         while not stop_flag:
             k = cv2.waitKey(50) & 0xFF
             if k == ord(' '):
@@ -541,18 +553,94 @@ def make_session_plots(frames, reps, stem, out_dir, show_plots=False):
         plt.show()                                         # blocks until the graph windows are closed
     else:
         plt.close("all")
+# ----------------------------------------------------------------- live stream input
+def parse_source(s):
+    """'0' / '1' ... -> webcam index; anything else is returned as it is (URL, video file or folder)."""
+    return int(s) if str(s).isdigit() else s
+
+
+def is_live_source(src):
+    """Webcam index or a network stream (rtsp / rtmp / http) = live; a file or folder path = recorded video."""
+    return isinstance(src, int) or (isinstance(src, str) and src.lower().startswith(("rtsp://", "rtmp://", "http://", "https://")))
+
+
+class LiveCapture:
+    """Reads a webcam / network stream in a background thread and always hands out the NEWEST frame.
+    If the analysis is slower than the camera, old frames are dropped instead of piling up, so what you see
+    (and what is analysed) is what is happening now, not several seconds ago."""
+    def __init__(self, source):
+        backend = cv2.CAP_DSHOW if (os.name == "nt" and isinstance(source, int)) else cv2.CAP_ANY
+        self.cap = cv2.VideoCapture(source, backend)
+        if isinstance(source, int):
+            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAM_WIDTH)
+            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAM_HEIGHT)
+            self.cap.set(cv2.CAP_PROP_FPS, CAM_FPS)
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)             # not every backend honours this; the thread covers it
+        self.lock = threading.Lock()
+        self.frame, self.t, self.seq = None, 0.0, 0
+        self.dead, self.stop = False, False
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+
+    def isOpened(self):
+        return self.cap.isOpened()
+
+    def start(self):
+        self.thread.start()
+        return self
+
+    def _loop(self):
+        fails = 0
+        while not self.stop:
+            ok, f = self.cap.read()
+            if not ok:
+                fails += 1
+                if fails >= MAX_READ_FAILS:
+                    self.dead = True
+                    return
+                time.sleep(0.02)
+                continue
+            fails = 0
+            with self.lock:
+                self.frame, self.t, self.seq = f, time.monotonic(), self.seq + 1
+
+    def read(self, last_seq, timeout=5.0):
+        """(ok, frame, capture_time, seq) for the newest frame newer than last_seq; ok=False if the stream died."""
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < timeout:
+            with self.lock:
+                if self.frame is not None and self.seq != last_seq:
+                    return True, self.frame, self.t, self.seq
+            if self.dead:
+                break
+            time.sleep(0.002)
+        return False, None, 0.0, last_seq
+
+    def release(self):
+        self.stop = True
+        self.thread.join(timeout=1.0)
+        self.cap.release()
 
 # ----------------------------------------------------------------- main processing
-def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
-    global stop_flag
+def process_video(video_path, show=True, out_dir="outputs", show_plots=False, max_seconds=None, fps_cap=None):
+    global stop_flag, live_mode
     stop_flag = False
+    live = is_live_source(video_path)
+    live_mode = live
 
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise FileNotFoundError(f"Cannot open video: {video_path}")
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    video_name = os.path.basename(video_path)
-    stem = os.path.splitext(video_name)[0]
+    if live:                                                  # webcam / stream: newest-frame reader thread
+        cap = LiveCapture(video_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open camera / stream: {video_path}")
+        cap.start()
+        fps = CAM_FPS
+        video_name = stem = time.strftime("live_%Y%m%d_%H%M%S")      # name used for the output files
+    else:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise FileNotFoundError(f"Cannot open video: {video_path}")
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        video_name = os.path.basename(video_path)
+        stem = os.path.splitext(video_name)[0]
     os.makedirs(out_dir, exist_ok=True)
 
     options = vision.PoseLandmarkerOptions(
@@ -576,7 +664,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
     rep_start_t = 0.0
     min_knee = 999.0
     frame_scores = []
-    err_streak, err_max = {}, {}     # current run / longest run of consecutive bad frames, per error code
+    err_start, err_max = {}, {}      # when the current run of each error began (s) / longest run so far (s)
     vk, vb = Velocity(VEL_WINDOW_S), Velocity(VEL_WINDOW_S)     # knee-angle and back-lean velocity
     rep_series = []
     last_result = "-"
@@ -594,6 +682,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
     accuracies, last_acc = [], 0.0
     rep_rows, frame_rows = [], []
     frame_idx = 0
+    seq, t_start, last_ts_ms, fps_live, prev_t, t_s, last_iter_t = -1, None, -1, 0.0, None, 0.0, None
 
     def snapshot(feedback, level, **extra):
         """Everything the side panel shows, read from the current state of the loop."""
@@ -606,14 +695,33 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
     # a NEW landmarker per video: VIDEO mode needs monotonically increasing timestamps
     with vision.PoseLandmarker.create_from_options(options) as detector:
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+            if fps_cap and last_iter_t is not None:          # testing only: slow the loop down to mimic the edge device
+                time.sleep(max(0.0, 1.0 / fps_cap - (time.monotonic() - last_iter_t)))
+            last_iter_t = time.monotonic()
+            if live:
+                ret, frame, t_cap, seq = cap.read(seq)         # always the NEWEST frame, stamped with its capture time
+                if not ret:
+                    break                                       # camera / stream lost
+                t_start = t_cap if t_start is None else t_start
+                t_s = t_cap - t_start                           # real seconds since the session started
+                if max_seconds and t_s >= max_seconds:
+                    break
+            else:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                t_s = frame_idx / fps
             h, w = frame.shape[:2]
             this_frame = frame_idx
-            t_s = this_frame / fps
-            ts_ms = int(this_frame * 1000 / fps)
+            ts_ms = max(int(t_s * 1000), last_ts_ms + 1)       # MediaPipe needs strictly increasing timestamps
+            last_ts_ms = ts_ms
             frame_idx += 1                                   # increment BEFORE any `continue`
+            if prev_t is not None and t_s - prev_t > GAP_BREAK_S:
+                err_start.clear()                              # frames too far apart: not one continuous error
+            if live and prev_t is not None and t_s > prev_t:   # measured processing speed
+                inst = 1.0 / (t_s - prev_t)
+                fps_live = inst if not fps_live else 0.9 * fps_live + 0.1 * inst
+            prev_t = t_s                            # increment BEFORE any `continue`
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
@@ -641,7 +749,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
             if skip_msg:
                 row["feedback"] = skip_msg
                 frame_rows.append(row)
-                err_streak.clear()                       # an unusable frame breaks every streak
+                err_start.clear()                       # an unusable frame breaks every streak
                 vk.reset(); vb.reset()
                 heel_s["LEFT"] = heel_s["RIGHT"] = None
                 toe_s["LEFT"] = toe_s["RIGHT"] = None
@@ -666,7 +774,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
             if any(np.isnan(v) for v in raw):
                 row["feedback"] = "NaN angle"
                 frame_rows.append(row)
-                err_streak.clear()
+                err_start.clear()
                 vk.reset(); vb.reset()
                 heel_s["LEFT"] = heel_s["RIGHT"] = None
                 if present(make_canvas(disp, snapshot("Angle error - skipping frame", "warn")), show):
@@ -707,7 +815,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                     metrics, bounced = rep_metrics(rep_series, t_s) if rep_series else ({}, False)
                     metrics = dict(metrics, m_heel_lift_max=round(heel_rise_max, 3), m_toe_lift_max=round(toe_rise_max, 3),
                                    m_knee_toe_max=round(knee_toe_max, 3) if knee_toe_max > -9 else "")
-                    errs = sorted(c for c, n in err_max.items() if n >= (VEL_ERR_MIN_FRAMES if c in VEL_MSG else ERR_MIN_FRAMES))
+                    errs = sorted(c for c, n in err_max.items() if n >= min_run_s(c))
                     if reached_depth and bounced:                  # BOUNCE is a single event, judged once per rep
                         errs = sorted(set(errs) | {"BOUNCE"})
                     if reached_depth and abs(metrics.get("m_bottom_lean_shift", 0.0)) > BUTT_WINK_SHIFT:
@@ -736,7 +844,7 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                 if not in_rep:                                # a new rep attempt begins
                     in_rep, reached_depth, min_knee = True, False, 999.0
                     rep_start_t = t_s
-                    frame_scores, err_streak, err_max = [], {}, {}
+                    frame_scores, err_start, err_max = [], {}, {}
                     rep_series = []
                     # freeze the flat-foot baseline from the standing frames just before this rep
                     heel_base = {sd: float(np.percentile(b, 80)) for sd, b in heel_buf.items() if len(b) >= HEEL_BASE_MIN_FRAMES}
@@ -853,15 +961,15 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
                 feedback, level = ALERT_MSG[extra_errs[0]], "warn"
 
             # ---- consecutive-frame tracking, for EVERY error code in every state
-            for code in list(err_streak):                # a streak ends the moment the error stops firing
+            for code in list(err_start):                 # a run ends the moment the error stops firing
                 if code not in frame_errs:
-                    err_streak[code] = 0
+                    del err_start[code]
             for code in frame_errs:
-                err_streak[code] = err_streak.get(code, 0) + 1
-                err_max[code] = max(err_max.get(code, 0), err_streak[code])
+                t0 = err_start.setdefault(code, t_s)     # time this run began
+                err_max[code] = max(err_max.get(code, 0.0), t_s - t0)     # seconds the error has lasted so far
             if in_rep:      # an error confirmed earlier in this rep stays on screen, in red, until the rep ends
                 confirmed = [c for c in LIVE_PRIORITY if c in ENABLED_ERRORS and
-                             err_max.get(c, 0) >= (VEL_ERR_MIN_FRAMES if c in VEL_MSG else ERR_MIN_FRAMES)]
+                            err_max.get(c, 0.0) >= min_run_s(c)]
                 if confirmed:
                     feedback, level = LIVE_MSG[confirmed[0]], "error"
                     if len(confirmed) > 1:
@@ -895,6 +1003,8 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
             roi = disp[8:th + 28, 8:tw + 28]
             roi[:] = (roi * 0.35).astype(np.uint8)                                       # darken a box so it is readable on any background
             cv2.putText(disp, s_label, (16, th + 16), FONT, 0.8, s_color, 2, cv2.LINE_AA)
+            if live:
+                cv2.putText(disp, f"LIVE {fps_live:.0f} fps", (max(dw - 170, 4), 28), FONT, 0.6, C_GREEN, 2, cv2.LINE_AA)
             info = snapshot(feedback, level, angles=(knee_angle, hip_angle, back_angle, ankle_angle),
                             vels=(knee_vel, back_vel), heel_rise=heel_rise, toe_rise=toe_rise)
 
@@ -908,7 +1018,9 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
 
             if present(make_canvas(disp, info), show):
                 break
-    
+    if live:
+        print(f"live session: {frame_idx} frames analysed in {t_s:.0f} s ({frame_idx / max(t_s, 1e-6):.1f} fps)"
+              + ("  - camera / stream lost" if cap.dead else ""))
     cap.release()
     write_csv(os.path.join(out_dir, f"{stem}_frames.csv"), frame_rows, FRAME_FIELDS)
     write_csv(os.path.join(out_dir, f"{stem}_reps.csv"), rep_rows, REP_FIELDS)
@@ -922,7 +1034,10 @@ def process_video(video_path, show=True, out_dir="outputs", show_plots=False):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--input", default=VIDEO_PATH, help="video file or folder of videos")
+    ap.add_argument("--input", "--source", dest="source", default="0",
+                    help="webcam index (0, 1, ...), a stream URL (rtsp:// or http://), a video file, or a folder of videos")
+    ap.add_argument("--duration", type=float, default=None, help="live only: stop automatically after this many seconds")
+    ap.add_argument("--fps-cap", type=float, default=None, help="testing only: limit the analysis to this many frames per second")
     ap.add_argument("--out", default="outputs")
     ap.add_argument("--no-display", action="store_true", help="headless batch run")
     args = ap.parse_args()
@@ -930,17 +1045,22 @@ def main():
 
     download_model()
 
-    if os.path.isdir(args.input):
+    source = parse_source(args.source)
+    if is_live_source(source):
+        if not show and not args.duration:
+            raise SystemExit("Live analysis without a display needs --duration SECONDS (otherwise nothing can stop it).")
+        videos = [source]
+    elif os.path.isdir(source):
         videos = sorted({p for ext in ("mp4", "mov", "avi", "mkv")
-                         for p in glob.glob(os.path.join(args.input, "**", f"*.{ext}"), recursive=True)})
+                         for p in glob.glob(os.path.join(source, "**", f"*.{ext}"), recursive=True)})
     else:
-        videos = [args.input]
+        videos = [source]
     if not videos:
         raise SystemExit("No videos found.")
 
     all_rows, last = [], None
     for v in videos:
-        last = process_video(v, show=show, out_dir=args.out, show_plots=show and len(videos) == 1)
+        last = process_video(v, show=show, out_dir=args.out, show_plots=show and len(videos) == 1, max_seconds=args.duration, fps_cap=args.fps_cap)
         all_rows += last["rep_rows"]
         if stop_flag:
             break

@@ -37,16 +37,16 @@ MODEL_URL  = (
 
 def download_model():
     if os.path.exists(MODEL_PATH):
-        print(f"  Model already present: {MODEL_PATH}")
+        print(f"Model already present: {MODEL_PATH}")
         return
-    print(f"  Downloading model → {MODEL_PATH}")
+    print(f"  Downloading model - {MODEL_PATH}")
     urllib.request.urlretrieve(MODEL_URL, MODEL_PATH)
     print("Downloaded")
 
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Abduction\Sayalee_SHA_R_1.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Abduction\Patient_178_SHA_L.mp4"
 OUTPUT_CSV  = "docs/Datasets/Shoulder_Abduction/shoulder_abduction_data.csv"
 PATIENT_ID = "Sayalee_SHA_R_1"
 SIDE = "right"   #Here we provide the side that is facing the camera 

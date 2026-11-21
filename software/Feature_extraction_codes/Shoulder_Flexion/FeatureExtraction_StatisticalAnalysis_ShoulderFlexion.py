@@ -46,10 +46,10 @@ def download_model():
 download_model()
 
 #Here we provide the video path as well as the csv file where the extracted features should be appeneded. 
-VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Gauri_SHF_R_4.mp4"
+VIDEO_PATH  = r"C:\Users\ADMIN\Documents\GitHub\BE_Project_2026_2027\videos\Shoulder_Flexion\Patient_198_SHF_L.mp4"
 OUTPUT_CSV  = "docs/shoulder_flexion_data.csv"
-PATIENT_ID = "Gauri_SHF_R"
-SIDE = "right"   #Here we provide the side that is facing the camera 
+PATIENT_ID = "Patient_198_SHF_L"
+SIDE = "left"   #Here we provide the side that is facing the camera 
 PATIENT_HEIGHT_CM = 155
 EYE_TO_VERTEX_FRAC = 0.065
 VIS_THRESHOLD = 0.5
