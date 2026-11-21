@@ -1,0 +1,104 @@
+video,start_s,end_s,label ,errors
+Participant_101_SQ_L,0,1.6,Incorrect,NECK_DOWN
+Participant_101_SQ_L,2.166,3.866,Incorrect,NECK_DOWN
+Participant_101_SQ_L,4.433,6.199,Incorrect,NECK_DOWN
+Participant_101_SQ_L,6.333,7.932,Incorrect,NECK_DOWN
+Participant_101_SQ_L,8.499,9.932,Incorrect,NECK_DOWN
+Participant_101_SQ_L,10.565,12.065,Incorrect,NECK_DOWN
+Participant_101_SQ_L,12.865,14.165,Incorrect,NECK_DOWN
+Participant_101_SQ_R,0.333,2.433,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,2.833,4.633,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,5.2,6.833,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,7.399,8.933,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,9.466,11.099,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,11.499,13.166,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,13.632,15.266,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,15.799,17.465,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_101_SQ_R,17.732,19.665,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_104_SQ_R,0.433,2.033,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_104_SQ_R,2.733,4.466,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_104_SQ_R,5.066,6.899,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_104_SQ_R,7.499,9.132,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_104_SQ_R,9.866,11.532,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_104_SQ_R,12.232,13.998,Incorrect,NECK_DOWN; FAST_DESCENT
+Participant_105_SQ_L,0.667,2.633,Incorrect,HEEL_LIFT; 
+Participant_105_SQ_L,3.033,5.366,Incorrect,TOE_LIFT
+Participant_105_SQ_L,5.666,7.8,Incorrect,BOUNCE
+Participant_105_SQ_L,8.333,10.299,Incorrect,BOUNCE
+Participant_105_SQ_L,10.766,12.699,Incorrect,BOUNCE
+Participant_105_SQ_L,13.199,15.299,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_105_SQ_L,15.766,17.632,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_105_SQ_L,18.299,20.332,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_105_SQ_L,21.099,23.332,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_105_SQ_L,23.898,25.965,Incorrect,HEEL_LIFT; LEAN_FORWARD
+Participant_105_SQ_R,0.467,2.8,Incorrect,HEEL_LIFT
+Participant_105_SQ_R,3.266,5.433,Incorrect,HEEL_LIFT
+Participant_105_SQ_R,5.933,8.066,Incorrect,HEEL_LIFT
+Participant_105_SQ_R,8.599,10.666,Incorrect,HEEL_LIFT
+Participant_105_SQ_R,11.099,13.899,Incorrect,HEEL_LIFT
+Participant_105_SQ_R,14.232,16.198,Incorrect,HEEL_LIFT
+Participant_107_SQ_L,1.833,4.3,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,6.233,8.8,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,10.4,12.733,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,14.366,16.766,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,18.233,20.566,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,21.999,24.132,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,26.299,28.499,Incorrect,SQUAT_DEEPER; NECK_DOWN; LEAN_FORWARD
+Participant_107_SQ_L,29.532,32.099,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,33.665,35.565,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_L,36.932,38.932,Incorrect,SQUAT_DEEPER; NECK_DOWN
+Participant_107_SQ_R,0.867,3.233,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,4.666,7.133,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,8.866,11.1,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,12.133,14.733,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,16.433,18.666,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,19.999,22.366,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,23.799,26.399,Incorrect,SQUAT_DEEPER; LEAN_FORWARD
+Participant_107_SQ_R,27.465,29.732,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,30.932,33.199,Incorrect,SQUAT_DEEPER
+Participant_107_SQ_R,34.565,36.765,Incorrect,SQUAT_DEEPER
+Participant_108_SQ_L,3.566,5.033,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,5.566,6.866,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,7.366,8.599,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,9.133,10.399,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,10.966,12.332,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,12.832,14.032,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,14.532,15.699,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_L,16.199,17.465,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,2.366,3.766,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,4.133,5.499,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,5.966,7.199,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,7.766,9.099,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,9.599,10.899,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,11.432,12.665,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_108_SQ_R,13.099,14.299,Incorrect,LEAN_FORWARD; TORSO_SWING
+Participant_109_SQ_L,1.467,2.7,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,2.933,4.1,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,4.3,5.466,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,5.566,6.766,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,6.899,8.066,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,8.233,9.399,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,9.566,10.732,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,10.899,12.032,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,12.199,13.365,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_109_SQ_L,13.532,14.699,Incorrect,BOUNCE; HEEL_LIFT; FAST_DESCENT
+Participant_110_SQ_L,1.133,2.633,Correct,
+Participant_110_SQ_L,3.333,4.9,Correct,
+Participant_110_SQ_L,5.7,7.333,Correct,
+Participant_110_SQ_L,8.233,9.833,Correct,
+Participant_110_SQ_L,10.699,12.333,Correct,
+Participant_110_SQ_L,13.199,14.899,Correct,
+Participant_110_SQ_L,15.866,17.599,Correct,
+Participant_110_SQ_L,18.599,20.265,Correct,
+Participant_110_SQ_L,21.265,23.065,Correct,
+Participant_110_SQ_L,23.798,25.565,Correct,
+Participant_110_SQ_R,1.333,2.8,Correct,
+Participant_110_SQ_R,3.367,4.866,Correct,
+Participant_110_SQ_R,5.466,7.066,Correct,
+Participant_110_SQ_R,7.733,9.333,Correct,
+Participant_110_SQ_R,9.933,11.633,Correct,
+Participant_110_SQ_R,12.266,13.966,Correct,
+Participant_110_SQ_R,14.633,16.466,Correct,
+Participant_110_SQ_R,17.066,18.932,Correct,
+Participant_110_SQ_R,19.732,21.299,Correct,
+Participant_110_SQ_R,22.166,23.899,Correct,
