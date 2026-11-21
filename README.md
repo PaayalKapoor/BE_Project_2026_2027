@@ -25,6 +25,23 @@ Fitonexa - The Smart Fitness Expert
 **Institute:** VESIT, Mumbai  
 
 ---
+## Demonstration & Viva
+<table width="100%" style="border-collapse: collapse; border: none;">
+  <tr>
+    <!-- Left Image and Caption -->
+    <td align="left" style="border: none; width: 50%;">
+      <img src="images/review.jpeg" alt="Rath-1" width="300"><br>
+      <small>Review</small>
+    </td>
+    <!-- Right Image and Caption -->
+    <td align="right" style="border: none; width: 50%;">
+      <img src="images/fitonexa.jpeg" alt="Rath-2" width="300"><br>
+      <small>Hardware</small>
+    </td>
+  </tr>
+</table>
+
+--- 
 
 ## Review Photos
 <table width="100%" style="border-collapse: collapse; border: none;">
