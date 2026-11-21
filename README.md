@@ -48,12 +48,12 @@ Fitonexa - The Smart Fitness Expert
   <tr>
     <!-- Left Image and Caption -->
     <td align="left" style="border: none; width: 50%;">
-      <img src="images/review2_1.jpg" alt="Rath-1" width="300"><br>
+      <img src="images/review2_1.jpg" alt="Rath-1" width="300" height="300"><br>
       <small>Review</small>
     </td>
     <!-- Right Image and Caption -->
     <td align="right" style="border: none; width: 50%;">
-      <img src="images/review2_2.jpg" alt="Rath-2" width="300"><br>
+      <img src="images/review2_2.jpg" alt="Rath-2" width="300" height="300"><br>
       <small>Hardware</small>
     </td>
   </tr>
